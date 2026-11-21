@@ -3126,9 +3126,11 @@ yes" (the two API fixes).
 448. **The writer's dialect**: `grammar_clauses_spec(txn, dialect, clauses, schemas, editions)`, the frame symbol of
      the dialect that owns the grammar clauses the caller's (every define here passes `"dialect"`), no longer a fixed
      `dialect`. A breaking change: mbse-programs' `Standards.define`s call it.
-449. **A kind's membership flagged** *(agent: where)*: as decided, each standard's oldest edition `before` and its
-     newest `after`, but on the edition, `Expressions.Framework.Standard`'s bools `before` and `after`, not on
-     `HasStandard`: mbse-schemas refuses an extension adjacency (a kind's schema's `standards`) to a relation with
+449. **A kind's membership flagged**: as decided, each standard's oldest edition `before` and its newest `after`. They
+     belong on `HasStandard`, as the user decided, once mbse-schemas allows properties on a relation an extension
+     adjacency reads (its CAP-116, Decided 18 and 22, to be revised there). Until then, temporarily and not as a
+     decision, they are on the edition, `Expressions.Framework.Standard`'s bools `before` and `after`: mbse-schemas
+     refuses an extension adjacency (a kind's schema's `standards`) to a relation with
      properties ("an extension's adjacency 'standards' is to a relation of two links and no properties"), and
      `Covers`, the dialect's mapping by designation, takes one property alone. `editions_spec(editions)`
      (`editionsSpec`) gives the specs that flag them, editions grouped by standard as for `grammar_clauses_spec`; every
@@ -3143,6 +3145,10 @@ yes" (the two API fixes).
      `throwspecifier without types` (`throw()`, C++17 alone) and `declspecifier.keyword 'register'` (removed by C++17;
      a `DeclSpecifier` is C++ Expressions' helper, which mbse-programs' declarations hold too), C++'s
      `ThrowSpecifier` among the helpers its grammar clauses are about. Python3 has 11 grammar clauses, C 9, C++ 23.
+     Each `Allows` and `Forbids` entry is flagged by what is true beyond it, as the user decided: a construct the
+     oldest covered edition forbids is one added later, its entry flagged `before`, unless it records a removal by that
+     edition or one before it, `removed(clause)` (TypeScript `removed`, `GrammarClause`'s field `removed`), whose
+     entries are not: C++14 is guessed to allow `throw(int)` and `register`, Python 2.7 a name `async`.
 451. **Tests**: FRM-14 extended in both languages: the model (`quantifier`, `at_least`, `Requires`), `takes`' pairs
      (a container's indices, None for a scalar), the recorded data and the removals, an edition by designation (Python
      3.16 and 2.7, C2y, C99, one between two, another standard's, one whose designation holds no revision) for a

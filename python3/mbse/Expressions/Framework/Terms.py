@@ -54,7 +54,7 @@ reference object holding its formal reference's parts, its `bodies` by reverse-d
 `names` (`C11`), so that it is found by either; each kind's schema, a `Schemas.OfObject`, records the editions that
 have it through the extension adjacency `standards` (`Expressions.Framework.HasStandard(kind, standard)`, a set). A
 standard's oldest edition a dialect covers is flagged `before`, and its newest `after`, guessing the kinds of an edition
-the data does not represent.
+the data does not represent: on the edition for now, pending mbse-schemas' allowing them on `HasStandard`.
 `Domains` reads stored domains and operations, `Standards` stored standards.
 
 Terms are built through mbse-schemas' builders, in a transaction, and read through its readers: a term's kind is the
@@ -249,8 +249,9 @@ def install(txn: Any) -> Any:
                 "number": S.OfStr, "revision": _.Revision,
                 "names": S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfStr])),  # its common names
                 # the kinds it has standing for the editions of its standard before or after it that the data does not
-                # represent, only to guess them, as `Allows`'s flags do: on the edition, as `HasStandard`, which a
-                # kind's schema reads through an extension adjacency, can hold no properties
+                # represent, only to guess them, as `Allows`'s flags do: for now on the edition, until mbse-schemas
+                # allows properties on `HasStandard`, which a kind's schema reads through an extension adjacency
+                # (mbse-schemas' CAP-116, to be revised there), where they belong
                 "before": S.OfBool, "after": S.OfBool,
             }).adjacencies({
                 "dialect": lambda a: a.relation([_.Covers]).me("standard").owner(True),  # its dialect's, then its

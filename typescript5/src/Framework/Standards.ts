@@ -23,9 +23,9 @@
  *   entries from its side, through its extension adjacency `standards`. Each standard's oldest edition a dialect
  *   covers is flagged `before`, and its newest `after`, as the user decided for a kind's membership as for a grammar
  *   clause's `Allows` and `Forbids` (mbse-basis [grammar clauses by
- *   version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "Decided in stage 3": "1. I already confirmed that"): on
- *   the edition *(agent)*, as `HasStandard`, which a kind's schema reads through an extension adjacency, can hold no
- *   properties (mbse-schemas).
+ *   version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "Decided in stage 3": "1. I already confirmed that"). They
+ *   belong on `HasStandard`, as decided; they are on the edition for now, a workaround and not a decision, until
+ *   mbse-schemas allows properties on a relation an extension adjacency reads (its CAP-116, to be revised there).
  * - `editionHas(dialect, designation, revision, kind)`: whether an edition given by its designation and its revision
  *   has a kind, whether the dialect covers it or not: one it does not cover is guessed from its neighbours' flagged
  *   entries.
@@ -66,9 +66,10 @@
  *
  * A dialect's `define` writes its grammar clauses from a table, each a `GrammarClause` made by `present`, `absent`,
  * `values` or `kindsOf`, with the editions that allow it, and given its further forms by `every`, `none`, `atLeast` and
- * `requires`: `grammarClausesSpec(txn, dialect, clauses, schemas, editions)` gives the symbols and the specs that
- * write them in its frame, beside its editions, its dialect bound by the symbol `dialect`; and `editionsSpec(editions)`
- * the specs flagging each standard's oldest and newest editions.
+ * `requires`, and, where it records what an edition before the data removed, by `removed`: `grammarClausesSpec(txn,
+ * dialect, clauses, schemas, editions)` gives the symbols and the specs that write them in its frame, beside its
+ * editions, its dialect bound by the symbol `dialect`, each entry flagged by what is true beyond it; and
+ * `editionsSpec(editions)` the specs flagging each standard's oldest and newest editions.
  */
 
 import { Schemas } from "@mbse/schemas/Framework";
@@ -368,8 +369,9 @@ export function editionHas(dialect: Readers.OfObject, designation: string, revis
  * `holds` (`present`, `values` or `kinds`) and `held` (a boolean, the values, or the kinds' keys); the names of its
  * `nested` grammar clauses; and the editions that allow it, `allowed`, by their symbols in the define's frame, every
  * other edition it covers forbidding it, or null where no edition names it (a grammar clause only nested or only
- * required); and, of a container, its `quantifier` (`any`, `every` or `none`) and its count, `atLeast`; and the names
- * of the grammar clauses it `requires`. */
+ * required); and, of a container, its `quantifier` (`any`, `every` or `none`) and its count, `atLeast`; the names of
+ * the grammar clauses it `requires`; and whether it is `removed`, a construct the editions before the oldest one the
+ * define covers had, which that one's entry, forbidding it, therefore does not extend to (`before`). */
 export interface GrammarClause {
   readonly name: string;
   readonly kind: string;
@@ -381,9 +383,10 @@ export interface GrammarClause {
   readonly quantifier: "any" | "every" | "none";
   readonly atLeast: number;
   readonly requires: readonly string[];
+  readonly removed: boolean;
 }
 
-const FORM = { quantifier: "any", atLeast: 1, requires: [] } as const;
+const FORM = { quantifier: "any", atLeast: 1, requires: [], removed: false } as const;
 
 /** A grammar clause: a kind's property set (a container not empty). */
 export function present(name: string, kind: string, property: string,
@@ -431,6 +434,14 @@ export function requires(clause: GrammarClause, names: readonly string[]): Gramm
   return { ...clause, requires: names };
 }
 
+/** A grammar clause an edition removed, which the editions before the oldest one the define covers allowed (C++17's
+ * `throw(int)`): no entry of it is flagged `before`, so that an edition before the data is guessed, as no entry reaches
+ * it, to allow it; by default, a construct the oldest edition forbids is one added later, its entry flagged `before`, an
+ * edition before the data guessed to forbid it too. */
+export function removed(clause: GrammarClause): GrammarClause {
+  return { ...clause, removed: true };
+}
+
 /** The specs a dialect's `define` flags its editions with, given them by their symbols in its frame, grouped by
  * standard, each standard's oldest first (C's then C++'s): each standard's oldest edition `before` and its newest
  * `after`, as `grammarClausesSpec` flags the entries of grammar clauses, so that an edition the data does not represent
@@ -444,9 +455,9 @@ export function editionsSpec(editions: readonly (readonly string[])[]): ((_: any
  * the symbol `dialect`, and its editions: each grammar clause by `grammar_clause_<its index>`, owned by its name, its
  * kind's and its kinds' schemas by key (`schemas`), its quantifier and its count where they are not the default, the
  * grammar clauses it nests and requires, and each edition (`editions`, by symbol, each standard's oldest first: Python
- * 3's, or C's then C++'s) allowing it where `allowed` lists it, else forbidding it, each standard's oldest edition's
- * entry flagged `before` and its newest's `after`, so that an edition the data does not represent is guessed to have
- * what its nearest neighbour has. */
+ * 3's, or C's then C++'s) allowing it where `allowed` lists it, else forbidding it, each entry flagged by what is true
+ * beyond it: each standard's oldest edition's `before`, but a `removed` grammar clause's, and its newest's `after`, so
+ * that an edition the data does not represent is guessed to have what is true beyond its nearest neighbour. */
 export function grammarClausesSpec(
   txn: any, dialect: string, clauses: readonly GrammarClause[], schemas: ReadonlyMap<string, unknown>,
   editions: readonly (readonly string[])[],
@@ -455,11 +466,11 @@ export function grammarClausesSpec(
   const GC = txn.Expressions.Framework.GrammarClause;
   const flagged = new Map(editions.flatMap((standard) => standard.map((edition, index) =>
     [edition, [["before", index === 0], ["after", index === standard.length - 1]] as const] as const)));
-  const entry = (_: any, edition: string): unknown => {
+  const entry = (_: any, edition: string, clause: GrammarClause): unknown => {
     const standard = _[edition];
-    const flags = flagged.get(edition)!;
-    if (!flags.some(([, on]) => on)) return standard;
-    return (t: any) => flags.filter(([, on]) => on).map(([flag]) => t.standard(standard)[flag](true));
+    const flags = flagged.get(edition)!.filter(([flag, on]) => on && !(flag === "before" && clause.removed));
+    if (flags.length === 0) return standard;
+    return (t: any) => flags.map(([flag]) => t.standard(standard)[flag](true));
   };
   const write = (clause: GrammarClause) => (_: any): any => {
     let built = _[symbol.get(clause.name)!].property(clause.property).kind([schemas.get(clause.kind)]);
@@ -473,8 +484,8 @@ export function grammarClausesSpec(
     if (clause.allowed === null) return built;
     const allowed = clause.allowed;
     const all = [...flagged.keys()];
-    return built.allowed(all.filter((edition) => allowed.includes(edition)).map((edition) => entry(_, edition)))
-      .forbidden(all.filter((edition) => !allowed.includes(edition)).map((edition) => entry(_, edition)));
+    return built.allowed(all.filter((edition) => allowed.includes(edition)).map((edition) => entry(_, edition, clause)))
+      .forbidden(all.filter((edition) => !allowed.includes(edition)).map((edition) => entry(_, edition, clause)));
   };
   return [Object.fromEntries(clauses.map((clause) => [symbol.get(clause.name)!, GC])),
     [(_: any) => _[dialect].grammar_clauses(Object.fromEntries(clauses.map((clause) =>

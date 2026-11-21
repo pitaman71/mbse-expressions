@@ -21,9 +21,9 @@ The reading interface, over a dialect's or an edition's `Readers.OfObject`, foun
   entries from its side, through its extension adjacency `standards`. Each standard's oldest edition a dialect
   covers is flagged `before`, and its newest `after`, as the user decided for a kind's membership as for a grammar
   clause's `Allows` and `Forbids` (mbse-basis [grammar clauses by
-  version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "Decided in stage 3": "1. I already confirmed that"): on the
-  edition *(agent)*, as `HasStandard`, which a kind's schema reads through an extension adjacency, can hold no
-  properties (mbse-schemas).
+  version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "Decided in stage 3": "1. I already confirmed that"). They
+  belong on `HasStandard`, as decided; they are on the edition for now, a workaround and not a decision, until
+  mbse-schemas allows properties on a relation an extension adjacency reads (its CAP-116, to be revised there).
 - `edition_has(dialect, designation, revision, kind)`: whether an edition given by its designation and its revision
   has a kind, whether the dialect covers it or not: one it does not cover is guessed from its neighbours' flagged
   entries.
@@ -64,9 +64,10 @@ has no `Allows` or `Forbids` should default to allows." The reading:
 
 A dialect's `define` writes its grammar clauses from a table, each a `GrammarClause` made by `present`, `absent`,
 `values` or `kinds_of`, with the editions that allow it, and given its further forms by `every`, `none`, `at_least` and
-`requires`: `grammar_clauses_spec(txn, dialect, clauses, schemas, editions)` gives the symbols and the specs that write
-them in its frame, beside its editions, its dialect bound by the symbol `dialect`; and `editions_spec(editions)` the
-specs flagging each standard's oldest and newest editions.
+`requires`, and, where it records what an edition before the data removed, by `removed`: `grammar_clauses_spec(txn,
+dialect, clauses, schemas, editions)` gives the symbols and the specs that write them in its frame, beside its
+editions, its dialect bound by the symbol `dialect`, each entry flagged by what is true beyond it; and
+`editions_spec(editions)` the specs flagging each standard's oldest and newest editions.
 """
 
 from __future__ import annotations
@@ -80,8 +81,8 @@ from . import Objects, Terms
 
 __all__ = ["standards", "designation_of", "tags", "find", "properties", "kinds", "of", "grammar_clauses",
            "grammar_clause_name", "grammar_clause", "takes", "allows", "edition_allows", "edition_has", "GrammarClause",
-           "present", "absent", "values", "kinds_of", "every", "none", "at_least", "requires", "editions_spec",
-           "grammar_clauses_spec"]
+           "present", "absent", "values", "kinds_of", "every", "none", "at_least", "requires", "removed",
+           "editions_spec", "grammar_clauses_spec"]
 
 
 def standards(dialect: Readers.OfObject) -> dict[str, Readers.OfObject]:
@@ -366,8 +367,9 @@ class GrammarClause(NamedTuple):
     may hold, `holds` (`present`, `values` or `kinds`) and `held` (a bool, the values, or the kinds' keys); the names
     of its `nested` grammar clauses; and the editions that allow it, `allowed`, by their symbols in the define's frame,
     every other edition it covers forbidding it, or None where no edition names it (a grammar clause only nested or
-    only required); and, of a container, its `quantifier` (`any`, `every` or `none`) and its count, `at_least`; and the
-    names of the grammar clauses it `requires`."""
+    only required); and, of a container, its `quantifier` (`any`, `every` or `none`) and its count, `at_least`; the
+    names of the grammar clauses it `requires`; and whether it is `removed`, a construct the editions before the oldest
+    one the define covers had, which that one's entry, forbidding it, therefore does not extend to (`before`)."""
 
     name: str
     kind: str
@@ -379,28 +381,29 @@ class GrammarClause(NamedTuple):
     quantifier: str
     at_least: int
     requires: tuple[str, ...]
+    removed: bool
 
 
 def present(name: str, kind: str, prop: str, allowed: tuple[str, ...] | None) -> GrammarClause:
     """A grammar clause: a kind's property set (a container not empty)."""
-    return GrammarClause(name, kind, prop, "present", True, (), allowed, "any", 1, ())
+    return GrammarClause(name, kind, prop, "present", True, (), allowed, "any", 1, (), False)
 
 
 def absent(name: str, kind: str, prop: str, allowed: tuple[str, ...] | None) -> GrammarClause:
     """A grammar clause: a kind's property unset (a container empty)."""
-    return GrammarClause(name, kind, prop, "present", False, (), allowed, "any", 1, ())
+    return GrammarClause(name, kind, prop, "present", False, (), allowed, "any", 1, (), False)
 
 
 def values(name: str, kind: str, prop: str, held: tuple[Any, ...], allowed: tuple[str, ...] | None) -> GrammarClause:
     """A grammar clause: a kind's property holding one of these values (a container, one of its elements)."""
-    return GrammarClause(name, kind, prop, "values", held, (), allowed, "any", 1, ())
+    return GrammarClause(name, kind, prop, "values", held, (), allowed, "any", 1, (), False)
 
 
 def kinds_of(name: str, kind: str, prop: str, held: tuple[str, ...], nested: tuple[str, ...],
              allowed: tuple[str, ...] | None) -> GrammarClause:
     """A grammar clause: a kind's property holding a term of one of these kinds (a container, one of its elements),
     which takes any of the `nested` grammar clauses of its kind, where any is of its kind."""
-    return GrammarClause(name, kind, prop, "kinds", held, nested, allowed, "any", 1, ())
+    return GrammarClause(name, kind, prop, "kinds", held, nested, allowed, "any", 1, (), False)
 
 
 def every(clause: GrammarClause) -> GrammarClause:
@@ -434,25 +437,35 @@ def editions_spec(editions: Sequence[Sequence[str]]) -> list[Callable[[Any], Any
             for standard in editions for index, flag in ((0, "before"), (-1, "after"))]
 
 
+def removed(clause: GrammarClause) -> GrammarClause:
+    """A grammar clause an edition removed, which the editions before the oldest one the define covers allowed (C++17's
+    `throw(int)`): no entry of it is flagged `before`, so that an edition before the data is guessed, as no entry
+    reaches it, to allow it; by default, a construct the oldest edition forbids is one added later, its entry flagged
+    `before`, an edition before the data guessed to forbid it too."""
+    return clause._replace(removed=True)
+
+
 def grammar_clauses_spec(txn: Any, dialect: str, clauses: Sequence[GrammarClause], schemas: Mapping[str, Any],
                          editions: Sequence[Sequence[str]]) -> tuple[dict[str, Any], list[Callable[[Any], Any]]]:
     """The symbols and the specs a dialect's `define` writes its grammar clauses with, in a frame binding its dialect,
     by the symbol `dialect`, and its editions: each grammar clause by `grammar_clause_<its index>`, owned by its name,
     its kind's and its kinds' schemas by key (`schemas`), its quantifier and its count where they are not the default,
     the grammar clauses it nests and requires, and each edition (`editions`, by symbol, each standard's oldest first:
-    Python 3's, or C's then C++'s) allowing it where `allowed` lists it, else forbidding it, each standard's oldest
-    edition's entry flagged `before` and its newest's `after`, so that an edition the data does not represent is
-    guessed to have what its nearest neighbour has."""
+    Python 3's, or C's then C++'s) allowing it where `allowed` lists it, else forbidding it, each entry flagged by what
+    is true beyond it: each standard's oldest edition's `before`, but a `removed` grammar clause's, and its newest's
+    `after`, so that an edition the data does not represent is guessed to have what is true beyond its nearest
+    neighbour."""
     symbol = {clause.name: f"grammar_clause_{index}" for index, clause in enumerate(clauses)}
     GC = txn.Expressions.Framework.GrammarClause
     flagged = {edition: {"before": index == 0, "after": index == len(standard) - 1}
                for standard in editions for index, edition in enumerate(standard)}
 
-    def entry(_: Any, edition: str) -> Any:
-        standard, flags = getattr(_, edition), flagged[edition]
-        if not any(flags.values()):
+    def entry(_: Any, edition: str, clause: GrammarClause) -> Any:
+        standard = getattr(_, edition)
+        flags = [flag for flag, on in flagged[edition].items() if on and not (flag == "before" and clause.removed)]
+        if not flags:
             return standard
-        return lambda t: [getattr(t.standard(standard), flag)(True) for flag, on in flags.items() if on]
+        return lambda t: [getattr(t.standard(standard), flag)(True) for flag in flags]
 
     def write(clause: GrammarClause) -> Callable[[Any], Any]:
         def spec(_: Any) -> Any:
@@ -472,8 +485,9 @@ def grammar_clauses_spec(txn: Any, dialect: str, clauses: Sequence[GrammarClause
                 built = built.requires([getattr(_, symbol[name]) for name in clause.requires])
             if clause.allowed is None:
                 return built
-            return built.allowed([entry(_, edition) for edition in flagged if edition in clause.allowed]).forbidden(
-                [entry(_, edition) for edition in flagged if edition not in clause.allowed])
+            return built.allowed([entry(_, edition, clause) for edition in flagged if edition in clause.allowed]
+                                 ).forbidden([entry(_, edition, clause) for edition in flagged
+                                              if edition not in clause.allowed])
         return spec
 
     return ({symbol[clause.name]: GC for clause in clauses},

@@ -78,17 +78,18 @@ boundaries (`Terms.boundaries`).
 
 The editions C++ covers are data, which `define` writes, each owned by its designation and holding the kinds it has
 (`Framework.Standards`): ISO/IEC 14882:2017, 2020 and 2024, C++17, C++20 and C++23, every kind in each but C++20's
-(`co_await`, `co_yield`, `requires` and designated initializers), in C++20 and C++23 alone (`ONLY`), and an extension
-in none. What an edition changes within a kind is data, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or
-forbidden by each edition: C++20's `consteval`, `constinit`, `char8_t`, `<=>` and `operator<=>`, `operator co_await`,
-a lambda's template parameters and `requires`, a pack init-capture, a constrained placeholder (`Number auto`), a type
-parameter's constraint, a template template parameter's `requires` and `explicit(condition)`; C++23's lambda's
-attributes and `static`, an explicit object parameter, `auto(x)` and `auto{x}`, the literal suffixes `z` and `uz`, and
-a subscript of several indices (`at_least` two). What an edition removed is a grammar clause it forbids *(agent)*:
-C++17's dynamic exception specification of types (`throw(int)`) and the specifier `register`, allowed by no edition it
-covers, and C++20's `throw()`, C++17's alone. `DIALECT` reads the kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
-expression an `idexpression` (`identifier("x")`, and a callee named by a string):
-`store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C++ source.
+(`co_await`, `co_yield`, `requires` and designated initializers), in C++20 and C++23 alone (`ONLY`), and an extension in
+none. What an edition changes within a kind is data, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden
+by each edition: C++20's `consteval`, `constinit`, `char8_t`, `<=>` and `operator<=>`, `operator co_await`, a lambda's
+template parameters and `requires`, a pack init-capture, a constrained placeholder (`Number auto`), a type parameter's
+constraint, a template template parameter's `requires` and `explicit(condition)`; C++23's lambda's attributes and
+`static`, an explicit object parameter, `auto(x)` and `auto{x}`, the literal suffixes `z` and `uz`, and a subscript of
+several indices (`at_least` two). What an edition removed is a grammar clause it forbids *(agent)*: C++17's dynamic
+exception specification of types (`throw(int)`) and the specifier `register`, allowed by no edition it covers
+(`removed`: C++14 is guessed to allow them), and C++20's `throw()`, C++17's alone. `DIALECT` reads the kinds
+(`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an expression
+an `idexpression` (`identifier("x")`, and a callee named by a string): `store.Expressions.Framework.Term(binary("+",
+identifier("x"), 1))`. `Text.ToText` writes an expression as C++ source.
 
 Its kind of domain, the branch of its union `Expressions.Cpp.Expressions.DomainKind`, which `install` adds to the
 framework's `Expressions.Framework.DomainKind` as the branch `cpp`: the token `nullptr_t` (`OfNullptr`), C++'s own, with
@@ -768,9 +769,9 @@ GRAMMAR_CLAUSES = (
     FS.present("explicitspecifier.condition", "explicitspecifier", "condition", _CPP20),
     FS.at_least(2, FS.present("subscriptexpression of several indices", C.SUBSCRIPTEXPRESSION, "indices", _CPP23)),
     # removed: C++17 a dynamic exception specification of types and `register`, C++20 `throw()`
-    FS.present("throwspecifier of types", "throwspecifier", "types", ()),
+    FS.removed(FS.present("throwspecifier of types", "throwspecifier", "types", ())),
     FS.absent("throwspecifier without types", "throwspecifier", "types", ("Cpp17",)),
-    FS.values("declspecifier.keyword 'register'", "declspecifier", "keyword", ("register",), ()),
+    FS.removed(FS.values("declspecifier.keyword 'register'", "declspecifier", "keyword", ("register",), ())),
 )
 """Its grammar clauses, each with the editions that allow it, every other forbidding it, named as mbse-programs'
 `Check` names the language feature; `static` among a lambda's specifiers is a nested grammar clause."""

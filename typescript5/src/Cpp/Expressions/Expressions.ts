@@ -87,8 +87,9 @@
  * lambda's attributes and `static`, an explicit object parameter, `auto(x)` and `auto{x}`, the literal suffixes `z` and
  * `uz`, and a subscript of several indices (`at_least` two). What an edition removed is a grammar clause it forbids
  * *(agent)*: C++17's dynamic exception specification of types (`throw(int)`) and the specifier `register`, allowed by no
- * edition it covers, and C++20's `throw()`, C++17's alone. `DIALECT` reads the kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
- * expression an `idexpression` (`identifier("x")`, and a callee named by a string):
+ * edition it covers (`removed`: C++14 is guessed to allow them), and C++20's `throw()`, C++17's alone. `DIALECT` reads
+ * the kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as
+ * an expression an `idexpression` (`identifier("x")`, and a callee named by a string):
  * `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C++
  * source.
  *
@@ -759,9 +760,9 @@ export const GRAMMAR_CLAUSES: readonly FS.GrammarClause[] = [
   FS.present("explicitspecifier.condition", "explicitspecifier", "condition", CPP20),
   FS.atLeast(2, FS.present("subscriptexpression of several indices", C.SUBSCRIPTEXPRESSION, "indices", CPP23)),
   // removed: C++17 a dynamic exception specification of types and `register`, C++20 `throw()`
-  FS.present("throwspecifier of types", "throwspecifier", "types", []),
+  FS.removed(FS.present("throwspecifier of types", "throwspecifier", "types", [])),
   FS.absent("throwspecifier without types", "throwspecifier", "types", ["Cpp17"]),
-  FS.values("declspecifier.keyword 'register'", "declspecifier", "keyword", ["register"], []),
+  FS.removed(FS.values("declspecifier.keyword 'register'", "declspecifier", "keyword", ["register"], [])),
 ];
 
 const ANY1 = new FD.Function([FD.Anything], FD.Anything);
