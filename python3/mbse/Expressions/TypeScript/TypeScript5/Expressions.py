@@ -460,7 +460,7 @@ def define(txn: Any) -> Any:
              if branch.name in own and branch.name not in EXTENSIONS and branch.name not in F.INVALID_KINDS]  # but an
     # extension and invalid syntax
     MICROSOFT = ["com.microsoft"]
-    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, {
+    clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES, {
         branch.name: branch.schema for branch in TypeScript5.Term.as_schema().branches}, [Domains.VERSIONS])
     return txn.uid("mbse.Expressions.TypeScript.TypeScript5.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": TypeScript5.Dialect, **{f"TypeScript_5_{minor}": Standard for minor in range(10)},
@@ -491,6 +491,8 @@ def define(txn: Any) -> Any:
             lambda _: _.TypeScript_5_8.bodies(MICROSOFT).revision(lambda r: r.version("5.8")).kinds(every),
             lambda _: _.TypeScript_5_9.bodies(MICROSOFT).revision(lambda r: r.version("5.9")).kinds(every),
             # --- its grammar clauses, each allowed or forbidden by each version ---
+            # --- each standard's oldest edition flagged `before`, its newest `after` ---
+            *FS.editions_spec([Domains.VERSIONS]),
             *specs,
             # --- its domains ---
             lambda _: _.dialect.domains({

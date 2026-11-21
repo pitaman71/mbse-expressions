@@ -52,7 +52,9 @@ through `Expressions.Framework.Covers(dialect, designation, standard)`: an `Expr
 reference object holding its formal reference's parts, its `bodies` by reverse-domain name, its `number` and its
 `revision` (a value of `Expressions.Framework.Revision`: a `year`, an `edition` or a `version`), and its common
 `names` (`C11`), so that it is found by either; each kind's schema, a `Schemas.OfObject`, records the editions that
-have it through the extension adjacency `standards` (`Expressions.Framework.HasStandard(kind, standard)`, a set).
+have it through the extension adjacency `standards` (`Expressions.Framework.HasStandard(kind, standard)`, a set). A
+standard's oldest edition a dialect covers is flagged `before`, and its newest `after`, guessing the kinds of an edition
+the data does not represent.
 `Domains` reads stored domains and operations, `Standards` stored standards.
 
 Terms are built through mbse-schemas' builders, in a transaction, and read through its readers: a term's kind is the
@@ -164,8 +166,8 @@ def install(txn: Any) -> Any:
                   "Dialect": S.OfUnion, "Defines": S.OfRelation, "Operates": S.OfRelation,
                   "Standard": S.OfObject, "Revision": S.OfUnion, "Covers": S.OfRelation, "HasStandard": S.OfRelation,
                   "GrammarClause": S.OfObject, "Specifies": S.OfRelation, "HasGrammarClause": S.OfRelation,
-                  "Holds": S.OfRelation, "Nests": S.OfRelation, "Allows": S.OfRelation, "Forbids": S.OfRelation,
-                  "OfObject": S.OfObject})  # mbse-schemas' own, by name
+                  "Holds": S.OfRelation, "Nests": S.OfRelation, "Requires": S.OfRelation, "Allows": S.OfRelation,
+                  "Forbids": S.OfRelation, "OfObject": S.OfObject})  # mbse-schemas' own, by name
         .spec([
             # The union of the dialects' `Term`s: each dialect adds its own, `Expressions.<Dialect>.Term`, as the
             # branch named after it (`patterns`), by schema extension.
@@ -246,6 +248,10 @@ def install(txn: Any) -> Any:
                 "bodies": S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfStr])),  # by reverse-domain name
                 "number": S.OfStr, "revision": _.Revision,
                 "names": S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfStr])),  # its common names
+                # the kinds it has standing for the editions of its standard before or after it that the data does not
+                # represent, only to guess them, as `Allows`'s flags do: on the edition, as `HasStandard`, which a
+                # kind's schema reads through an extension adjacency, can hold no properties
+                "before": S.OfBool, "after": S.OfBool,
             }).adjacencies({
                 "dialect": lambda a: a.relation([_.Covers]).me("standard").owner(True),  # its dialect's, then its
                 # designation
@@ -260,7 +266,11 @@ def install(txn: Any) -> Any:
             # A grammar clause: an alternative within a production of a dialect's grammar, owned by the dialect by name:
             # a kind, one of its properties, and what that property may hold there, present or absent (`present`), one
             # of these values (`values`), or a term of one of these kinds (`kinds`), each kind's own subterms held as
-            # the nested grammar clauses of that kind say (`nested`). Each edition allows or forbids it (`Allows`,
+            # the nested grammar clauses of that kind say (`nested`), any one of them (mbse-basis [PRI-020: no
+            # constraint, any configuration](mbse:mbse-basis/docs/principles/PRI-020.md#decided)). A container holds
+            # it where `any` of its elements holds what it says (the default), `every` one or `none` (`quantifier`),
+            # at least `at_least` of them (1 by default); and it is taken only where the grammar clauses it `requires`,
+            # of its kind, are taken too, on the same term (`Requires`). Each edition allows or forbids it (`Allows`,
             # `Forbids`), `before` and `after` extending the entry to the editions before or after its own that the
             # data does not represent, only to guess support for one; a grammar clause no edition names is allowed
             # (mbse-basis [grammar clauses by version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md)).
@@ -268,11 +278,14 @@ def install(txn: Any) -> Any:
                 "property": S.OfStr,  # the property of its kind it is about, by name
                 "present": S.OfBool,  # set, or (false) unset
                 "values": S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfAny(lambda a: a)])),  # one of these
+                "quantifier": S.OfStr,  # `every` or `none` of a container's elements; unset, `any`
+                "at_least": S.OfInt,  # how many of them, at least; unset, 1
             }).adjacencies({
                 "dialect": lambda a: a.relation([_.Specifies]).me("clause").owner(True),  # its dialect's, then its name
                 "kind": lambda a: a.relation([_.HasGrammarClause]).me("clause"),
                 "kinds": lambda a: a.relation([_.Holds]).me("clause"),  # a term of one of these kinds
                 "nested": lambda a: a.relation([_.Nests]).me("clause"),  # what that term's own properties hold
+                "requires": lambda a: a.relation([_.Requires]).me("clause"),  # taken with it, on the same term
                 "allowed": lambda a: a.relation([_.Allows]).me("clause"),
                 "forbidden": lambda a: a.relation([_.Forbids]).me("clause")}),
             lambda _: _.Specifies.name("Expressions.Framework.Specifies").links([
@@ -287,6 +300,10 @@ def install(txn: Any) -> Any:
             lambda _: _.Nests.name("Expressions.Framework.Nests").links([
                 lambda t: t.name("clause").schema([_.GrammarClause]),
                 lambda t: t.name("nested").schema([_.GrammarClause])
+            ]).uniques([]),  # a set
+            lambda _: _.Requires.name("Expressions.Framework.Requires").links([
+                lambda t: t.name("clause").schema([_.GrammarClause]),
+                lambda t: t.name("required").schema([_.GrammarClause])
             ]).uniques([]),  # a set
             lambda _: _.Allows.name("Expressions.Framework.Allows").links([
                 lambda t: t.name("standard").schema([_.Standard]), lambda t: t.name("clause").schema([_.GrammarClause])

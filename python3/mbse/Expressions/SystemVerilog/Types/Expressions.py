@@ -36,7 +36,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as FD, Terms as F
+from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as F
 
 from ..Expressions import Domains as _family, Expressions as X
 
@@ -222,6 +222,8 @@ def define(txn: Any) -> Any:
                 ["SystemVerilog-2017"]).kinds(kinds[6]),
             lambda _: _.SystemVerilog_2023.bodies(["org.ieee"]).number("1800").revision(lambda r: r.year(2023)).names(
                 ["SystemVerilog-2023"]).kinds(kinds[7]),
+            # --- each standard's oldest edition flagged `before`, its newest `after` ---
+            *FS.editions_spec([_family.SYMBOLS[:3], _family.SYMBOLS[3:]]),
         ])]))])
 
 

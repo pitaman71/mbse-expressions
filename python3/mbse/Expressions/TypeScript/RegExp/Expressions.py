@@ -225,7 +225,7 @@ def define(txn: Any) -> Any:
             lambda r: getattr(r, revision[0])(revision[1])).names(list(names)).kinds(kinds)
 
     schemas = {**every, "flags": OWN.Flags.as_schema()}
-    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, schemas, [SYMBOLS])
+    clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES, schemas, [SYMBOLS])
     return txn.uid("mbse.Expressions.TypeScript.RegExp.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, **{symbol: Standard for symbol in SYMBOLS}, **clauses})
         .spec([
@@ -233,6 +233,8 @@ def define(txn: Any) -> Any:
                                            for designation, *_rest, symbol in EDITIONS}),
             *[lambda _, i=i, revision=revision, names=names, symbol=symbol: edition(i, revision, names)(getattr(_, symbol))
               for i, (_designation, revision, names, symbol) in enumerate(EDITIONS)],
+            # --- each standard's oldest edition flagged `before`, its newest `after` ---
+            *FS.editions_spec([SYMBOLS]),
             *specs,
         ])]))])
 

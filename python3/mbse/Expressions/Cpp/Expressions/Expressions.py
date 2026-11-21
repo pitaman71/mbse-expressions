@@ -83,10 +83,10 @@ in none. What an edition changes within a kind is data, its grammar clauses (`GR
 forbidden by each edition: C++20's `consteval`, `constinit`, `char8_t`, `<=>` and `operator<=>`, `operator co_await`,
 a lambda's template parameters and `requires`, a pack init-capture, a constrained placeholder (`Number auto`), a type
 parameter's constraint, a template template parameter's `requires` and `explicit(condition)`; C++23's lambda's
-attributes and `static`, an explicit object parameter, `auto(x)` and `auto{x}`, and the literal suffixes `z` and `uz`.
-A subscript of several indices, C++23's, stays unrecorded: it is a count of what a property holds, not what it holds
-*(agent)*. `DIALECT` reads the
-kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
+attributes and `static`, an explicit object parameter, `auto(x)` and `auto{x}`, the literal suffixes `z` and `uz`, and
+a subscript of several indices (`at_least` two). What an edition removed is a grammar clause it forbids *(agent)*:
+C++17's dynamic exception specification of types (`throw(int)`) and the specifier `register`, allowed by no edition it
+covers, and C++20's `throw()`, C++17's alone. `DIALECT` reads the kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
 expression an `idexpression` (`identifier("x")`, and a callee named by a string):
 `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C++ source.
 
@@ -612,7 +612,7 @@ def define(txn: Any) -> Any:
              if branch.name in _TAGS and branch.name not in EXTENSIONS}  # by its tag, but an extension
     schemas = {**{branch.name: branch.schema for branch in OWN.Term.as_schema().branches},
                **{name.lower(): getattr(OWN, name).as_schema() for name in _CLAUSE_HELPERS}}
-    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, schemas, [C.CPP_EDITIONS])
+    clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES, schemas, [C.CPP_EDITIONS])
 
     def has(edition: str) -> list[Any]:
         """The kinds an edition has, by its frame symbol: each not in `ONLY`, and each that lists it there."""
@@ -639,6 +639,8 @@ def define(txn: Any) -> Any:
             lambda _: _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2024)).names(
                 ["C++23"]).kinds(has("Cpp23")),
             # --- its grammar clauses, each allowed or forbidden by each edition ---
+            # --- each standard's oldest edition flagged `before`, its newest `after` ---
+            *FS.editions_spec([C.CPP_EDITIONS]),
             *specs,
             # --- its domains ---
             lambda _: _.dialect.domains({
@@ -738,7 +740,7 @@ C++20 and C++23; membership, no minimum edition."""
 _CPP20, _CPP23 = ("Cpp20", "Cpp23"), ("Cpp23",)
 _CLAUSE_HELPERS = ("DeclSpecifier", "PrimitiveTypeSpecifier", "OperatorName", "LambdaDeclarator", "InitCapture",
                    "PlaceholderTypeSpecifier", "TypeParameter", "TemplateTemplateParameter", "ParameterDeclaration",
-                   "ExplicitSpecifier")
+                   "ExplicitSpecifier", "ThrowSpecifier")
 """The helpers its grammar clauses are about, each keyed by its schema's name, lowercased."""
 
 GRAMMAR_CLAUSES = (
@@ -764,6 +766,11 @@ GRAMMAR_CLAUSES = (
     FS.values("literal.suffix 'z' or 'uz'", C.LITERAL, "suffix", tuple(
         spelling for z in ("z", "Z") for spelling in (z, f"u{z}", f"U{z}", f"{z}u", f"{z}U")), _CPP23),
     FS.present("explicitspecifier.condition", "explicitspecifier", "condition", _CPP20),
+    FS.at_least(2, FS.present("subscriptexpression of several indices", C.SUBSCRIPTEXPRESSION, "indices", _CPP23)),
+    # removed: C++17 a dynamic exception specification of types and `register`, C++20 `throw()`
+    FS.present("throwspecifier of types", "throwspecifier", "types", ()),
+    FS.absent("throwspecifier without types", "throwspecifier", "types", ("Cpp17",)),
+    FS.values("declspecifier.keyword 'register'", "declspecifier", "keyword", ("register",), ()),
 )
 """Its grammar clauses, each with the editions that allow it, every other forbidding it, named as mbse-programs'
 `Check` names the language feature; `static` among a lambda's specifiers is a nested grammar clause."""

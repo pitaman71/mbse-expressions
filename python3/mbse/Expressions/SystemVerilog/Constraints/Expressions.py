@@ -183,7 +183,7 @@ def define(txn: Any) -> Any:
     OWN, Standard = txn.Expressions.SystemVerilog.Constraints, txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS}
     kinds = X.editions(every, ONLY, _family.SYMBOLS[3:])
-    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, {
+    clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES, {
         **{branch.name: branch.schema for branch in OWN.Term.as_schema().branches},
         "distitem": OWN.DistItem.as_schema()}, [_family.SYMBOLS[3:]])
     return txn.uid("mbse.Expressions.SystemVerilog.Constraints.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
@@ -207,6 +207,8 @@ def define(txn: Any) -> Any:
                 ["SystemVerilog-2017"]).kinds(kinds[3]),
             lambda _: _.SystemVerilog_2023.bodies(["org.ieee"]).number("1800").revision(lambda r: r.year(2023)).names(
                 ["SystemVerilog-2023"]).kinds(kinds[4]),
+            # --- each standard's oldest edition flagged `before`, its newest `after` ---
+            *FS.editions_spec([_family.SYMBOLS[3:]]),
             *specs,
         ])]))])
 

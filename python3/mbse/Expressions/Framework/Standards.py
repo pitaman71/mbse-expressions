@@ -15,10 +15,18 @@ The reading interface, over a dialect's or an edition's `Readers.OfObject`, foun
 - `tags(standard)`: its designation, then its common names: the references it is found by.
 - `find(dialect, tag)`: the edition a dialect covers whose designation or common name is `tag`, or None.
 - `properties(standard)`: its formal reference's parts and its common names that are set, by name: a container as a
-  tuple, its `revision` as its branch and its value (`("year", 2011)`).
+  tuple, its `revision` as its branch and its value (`("year", 2011)`); not its flags.
 - `kinds(standard)`: the schemas of the kinds it has, in the order the store holds the entries; `of(dialect, kind)`:
   the editions a dialect covers that have a kind, given its schema, by designation. A kind's schema reads the same
-  entries from its side, through its extension adjacency `standards`.
+  entries from its side, through its extension adjacency `standards`. Each standard's oldest edition a dialect
+  covers is flagged `before`, and its newest `after`, as the user decided for a kind's membership as for a grammar
+  clause's `Allows` and `Forbids` (mbse-basis [grammar clauses by
+  version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "Decided in stage 3": "1. I already confirmed that"): on the
+  edition *(agent)*, as `HasStandard`, which a kind's schema reads through an extension adjacency, can hold no
+  properties (mbse-schemas).
+- `edition_has(dialect, designation, revision, kind)`: whether an edition given by its designation and its revision
+  has a kind, whether the dialect covers it or not: one it does not cover is guessed from its neighbours' flagged
+  entries.
 
 What changes from one edition to the next within a kind is data too: a grammar clause, an alternative within a
 production of the dialect's grammar, a language feature (mbse-basis [grammar clauses by
@@ -28,7 +36,10 @@ a conditional clause just with an opposite sense of version progression"). A dia
 (`Expressions.Framework.HasGrammarClause`, which the kind's schema reads through its extension adjacency
 `grammar_clauses`), one of its properties, and what that property may hold there: present or absent (`present`), one of
 these values (`values`), or a term of one of these kinds (`Expressions.Framework.Holds`), each kind's term holding what
-the nested grammar clauses of that kind say (`Expressions.Framework.Nests`). An edition allows or forbids it
+any of the nested grammar clauses of that kind says (`Expressions.Framework.Nests`); of a container, what `any` of its
+elements holds, `every` one or `none` (`quantifier`), at least `at_least` of them; and taken only where the grammar
+clauses it requires are taken too, on the same term (`Expressions.Framework.Requires`), as the user decided of these
+forms: "2. that's fine". An edition allows or forbids it
 (`Expressions.Framework.Allows`, `Expressions.Framework.Forbids`), each entry with the optional flags `before` and
 `after`, as the user decided: "Add two optional properties on `Allows` and `Forbids` : 'before' and 'after' which are
 only used by the system to guess support in the case that an edition has no representation. And a grammar clause that
@@ -37,18 +48,25 @@ has no `Allows` or `Forbids` should default to allows." The reading:
 - `grammar_clauses(dialect)`: a dialect's grammar clauses by name, in the order the store holds the entries;
   `grammar_clause_name(clause)`: the name its dialect owns it by, or None.
 - `grammar_clause(clause)`: what it says, by name: its `kind`'s schema, its `property`, and what it holds, `present`
-  (a bool), `values` (a tuple) or `kinds` (their schemas, a tuple), and its `nested` grammar clauses where it has any.
+  (a bool), `values` (a tuple) or `kinds` (their schemas, a tuple), its `quantifier` and `at_least` where they are set,
+  and its `nested` grammar clauses and those it `requires` where it has any.
 - `takes(dialect, term)`: the grammar clauses of a dialect that a term, or a helper, takes, in the order of
-  `grammar_clauses(dialect)`: those of its kind whose property holds what they say, a container where one of its
-  elements does, a term of one of their kinds where it takes each of their nested grammar clauses of its kind.
-- `allows(standard, clause)`: whether an edition allows a grammar clause: by its own `Allows` or `Forbids` of it;
-  where it has neither, the data not representing it, by those of its neighbours, the nearest editions before and
+  `grammar_clauses(dialect)`, each with the indices of the elements of its property that took it, or None where the
+  property as a whole did: those of its kind whose property holds what they say, a container where `any` of its
+  elements does (the default; `every` one, or `none`, as its quantifier says), at least `at_least` of them, a term of
+  one of their kinds where it takes any of their nested grammar clauses of its kind ("The "open universe" design
+  philosophy is interpreted by unions as "any"."), and each only where those it `requires` are taken too.
+- `allows(standard, clause)`: whether a stored edition allows a grammar clause: by its own `Allows` or `Forbids` of
+  it; where it has neither, the data not representing it, by those of its neighbours, the nearest editions before and
   after it by revision that have one, of its standard's number, an `after` entry's before it and a `before` entry's
-  after it, where they agree *(agent)*; otherwise allowed.
+  after it, where they agree *(agent)*; otherwise allowed. `edition_allows(dialect, designation, revision, clause)`:
+  the same of an edition given by its designation and its revision, whether the dialect covers it or not.
 
 A dialect's `define` writes its grammar clauses from a table, each a `GrammarClause` made by `present`, `absent`,
-`values` or `kinds`, with the editions that allow it: `grammar_clauses_spec(txn, clauses, schemas, editions)` gives
-the symbols and the specs that write them in its frame, beside its editions.
+`values` or `kinds_of`, with the editions that allow it, and given its further forms by `every`, `none`, `at_least` and
+`requires`: `grammar_clauses_spec(txn, dialect, clauses, schemas, editions)` gives the symbols and the specs that write
+them in its frame, beside its editions, its dialect bound by the symbol `dialect`; and `editions_spec(editions)` the
+specs flagging each standard's oldest and newest editions.
 """
 
 from __future__ import annotations
@@ -61,8 +79,9 @@ from mbse.Schemas.Framework import Readers, Schemas
 from . import Objects, Terms
 
 __all__ = ["standards", "designation_of", "tags", "find", "properties", "kinds", "of", "grammar_clauses",
-           "grammar_clause_name", "grammar_clause", "takes", "allows", "GrammarClause", "present", "absent", "values",
-           "kinds_of", "grammar_clauses_spec"]
+           "grammar_clause_name", "grammar_clause", "takes", "allows", "edition_allows", "edition_has", "GrammarClause",
+           "present", "absent", "values", "kinds_of", "every", "none", "at_least", "requires", "editions_spec",
+           "grammar_clauses_spec"]
 
 
 def standards(dialect: Readers.OfObject) -> dict[str, Readers.OfObject]:
@@ -99,12 +118,13 @@ def find(dialect: Readers.OfObject, tag: str) -> Readers.OfObject | None:
 
 def properties(standard: Readers.OfObject) -> dict[str, object]:
     """A stored edition's properties that are set, by name, in its schema's order: its `bodies` and `names` as tuples,
-    its `number` as itself, and its `revision` as its branch and its value (`("year", 2011)`)."""
+    its `number` as itself, and its `revision` as its branch and its value (`("year", 2011)`); not its flags, `before`
+    and `after`, which are no part of its reference."""
     found = Objects.properties(standard)
     revision = found.get("revision")
     return {name: tuple(value.values) if isinstance(value, Objects.Listed)
             else next(iter(Objects.properties(revision).items())) if name == "revision" else value
-            for name, value in found.items()}
+            for name, value in found.items() if name not in ("before", "after")}
 
 
 def kinds(standard: Readers.OfObject) -> list[Any]:
@@ -140,6 +160,10 @@ def _nested(clause: Readers.OfObject) -> tuple[Readers.OfObject, ...]:
     return tuple(entry.targets["nested"] for entry in Objects.entries(clause, "nested"))
 
 
+def _requires(clause: Readers.OfObject) -> tuple[Readers.OfObject, ...]:
+    return tuple(entry.targets["required"] for entry in Objects.entries(clause, "requires"))
+
+
 def _holds(clause: Readers.OfObject) -> tuple[str, Any]:
     """What a grammar clause's property may hold: `("values", (...))`, `("present", bool)` or `("kinds", (...))`."""
     found = Objects.properties(clause)
@@ -152,12 +176,15 @@ def _holds(clause: Readers.OfObject) -> tuple[str, Any]:
 
 def grammar_clause(clause: Readers.OfObject) -> dict[str, Any]:
     """What a stored grammar clause says, by name: its `kind`, its kind's schema; its `property`; what that property
-    may hold, `present` (a bool), `values` (a tuple) or `kinds` (their schemas, a tuple); and its `nested` grammar
-    clauses, a tuple, where it has any."""
+    may hold, `present` (a bool), `values` (a tuple) or `kinds` (their schemas, a tuple); its `quantifier` (`every` or
+    `none`) and its count, `at_least`, where they are set; and its `nested` grammar clauses and those it `requires`,
+    each a tuple, where it has any."""
     holds, held = _holds(clause)
-    nested = _nested(clause)
-    return {"kind": _kind(clause), "property": Objects.properties(clause).get("property"), holds: held,
-            **({"nested": nested} if nested else {})}
+    found = Objects.properties(clause)
+    nested, required = _nested(clause), _requires(clause)
+    return {"kind": _kind(clause), "property": found.get("property"), holds: held,
+            **{name: found[name] for name in ("quantifier", "at_least") if name in found},
+            **({"nested": nested} if nested else {}), **({"requires": required} if required else {})}
 
 
 def _record(value: Any) -> Any:
@@ -174,34 +201,62 @@ def _same(a: Any, b: Any) -> bool:
     return type(a) is type(b) and a == b
 
 
-def _takes(clause: Readers.OfObject, record: Any) -> bool:
-    """Whether a term's or a helper's record, of the grammar clause's kind, takes it."""
-    value = Objects.properties(record).get(Objects.properties(clause)["property"])
-    elements = () if value is None else value.values if isinstance(value, Objects.Listed) else (value,)
-    holds, held = _holds(clause)
+def _hits(clause: Readers.OfObject, element: Any, holds: str, held: Any) -> bool:
+    """Whether one element a grammar clause's property holds (a scalar property's value) is what it says one is: set,
+    one of its values, or a term of one of its kinds that takes any of its nested grammar clauses of that kind, or is of
+    a kind none is of (mbse-basis [PRI-020: no constraint, any
+    configuration](mbse:mbse-basis/docs/principles/PRI-020.md#decided): "The "open universe" design philosophy is
+    interpreted by unions as "any".")."""
     if holds == "present":
-        return bool(elements) == held
+        return True
     if holds == "values":
-        return any(_same(element, one) for element in elements for one in held)
-    nested = _nested(clause)
-    for element in elements:
-        inner = _record(element)
-        schema = inner.as_schema()
-        if any(kind is schema for kind in held) and all(
-                _takes(each, inner) for each in nested if _kind(each) is schema):
-            return True
-    return False
+        return any(_same(element, one) for one in held)
+    inner = _record(element)
+    schema = inner.as_schema()
+    alternatives = [each for each in _nested(clause) if _kind(each) is schema]
+    return any(kind is schema for kind in held) and (
+        not alternatives or any(_taken(each, inner) is not None for each in alternatives))
 
 
-def takes(dialect: Readers.OfObject, term: Any) -> list[Readers.OfObject]:
-    """The grammar clauses of a dialect that a term or a helper takes, in the order of `grammar_clauses(dialect)`: those
-    of its kind whose property holds what they say. A property that is a container holds what one of its elements
-    does; a term held is of one of a grammar clause's kinds where it takes each of its nested grammar clauses of that
-    kind. Nothing within the term is read but what its grammar clauses' properties hold: a caller walks the tree."""
+def _taken(clause: Readers.OfObject, record: Any) -> tuple[int, ...] | None | bool:
+    """Whether a term's or a helper's record, of the grammar clause's kind, takes it: None where it does not; where it
+    does, the indices of the elements of its property that hold what it says, where that property is a container and
+    it says what an element holds (`values` or `kinds`, of `any` or `every` element), else True."""
+    found = Objects.properties(clause)
+    value = Objects.properties(record).get(found["property"])
+    listed = isinstance(value, Objects.Listed)
+    elements = () if value is None else value.values if listed else (value,)
+    holds, held = _holds(clause)
+    hits = [index for index, element in enumerate(elements) if _hits(clause, element, holds, held)]
+    quantifier, least = found.get("quantifier", "any"), found.get("at_least", 1)
+    if holds == "present" and not held:
+        ok = not elements
+    elif quantifier == "none":
+        ok = not hits
+    else:
+        ok = len(hits) >= least and (quantifier != "every" or len(hits) == len(elements))
+    schema = record.as_schema()
+    if not ok or not all(_kind(each) is schema and _taken(each, record) is not None for each in _requires(clause)):
+        return None
+    return tuple(hits) if listed and holds != "present" and quantifier != "none" else True
+
+
+def takes(dialect: Readers.OfObject, term: Any) -> list[tuple[Readers.OfObject, tuple[int, ...] | None]]:
+    """The grammar clauses of a dialect that a term or a helper takes, in the order of `grammar_clauses(dialect)`, each
+    with the elements that took it: those of its kind whose property holds what they say. A property that is a
+    container holds what `any` of its elements does (or `every` one, or `none`, as its `quantifier` says), at least
+    `at_least` of them; a term held is of one of a grammar clause's kinds where it takes any of its nested grammar
+    clauses of that kind, or none is of its kind; and a grammar clause is taken only where those it `requires` are
+    taken too. Each comes with the indices of the elements of its property that took it, where that property is a
+    container and it says what an element holds (`values` or `kinds`, of `any` or `every` element); else None, the
+    property as a whole taking it (set or unset, a scalar, a count of it, or `none` of its elements). The grammar
+    clauses taken are each pair's first. Nothing within the term is read but what its grammar clauses' properties hold:
+    a caller walks the tree."""
     record = _record(term)
     schema = record.as_schema()
-    return [clause for clause in grammar_clauses(dialect).values()
-            if _kind(clause) is schema and _takes(clause, record)]
+    found = [(clause, _taken(clause, record))
+             for clause in grammar_clauses(dialect).values() if _kind(clause) is schema]
+    return [(clause, None if elements is True else elements) for clause, elements in found if elements is not None]
 
 
 def _verdicts(clause: Readers.OfObject) -> list[tuple[Readers.OfObject, bool, dict[str, Any]]]:
@@ -211,35 +266,95 @@ def _verdicts(clause: Readers.OfObject) -> list[tuple[Readers.OfObject, bool, di
             for entry in Objects.entries(clause, adjacency)]
 
 
+def _at(number: Any, revision: tuple[str, Any]) -> tuple[Any, ...]:
+    """Where an edition stands among its standard's editions, given its number and its revision: its number and its
+    revision's branch, then its value, a version by its dotted numbers."""
+    branch, value = revision
+    return (number, branch), tuple(int(part) for part in value.split(".")) if branch == "version" else (value,)
+
+
 def _order(standard: Readers.OfObject) -> tuple[Any, ...] | None:
-    """Where an edition stands among its standard's editions: its number and its revision's branch, then its value, a
-    version by its dotted numbers; None where it has no revision."""
+    """Where a stored edition stands among its standard's editions (`_at`); None where it has no revision."""
     found = properties(standard)
-    if "revision" not in found:
-        return None
-    branch, value = found["revision"]
-    at = tuple(int(part) for part in value.split(".")) if branch == "version" else (value,)
-    return (found.get("number"), branch), at
+    return _at(found.get("number"), found["revision"]) if "revision" in found else None  # type: ignore[arg-type]
+
+
+def _guesses(entries: Sequence[tuple[Any, bool, Mapping[str, Any]]], order: tuple[Any, ...]) -> set[bool]:
+    """The verdicts of the flagged entries nearest an edition at `order`, of its standard, each entry where its edition
+    stands, its verdict and its flags: the nearest before it flagged `after`, and the nearest after it flagged
+    `before`."""
+    placed = [(at[1], verdict, flags) for at, verdict, flags in entries
+              if at is not None and at[0] == order[0] and at[1] != order[1]]
+    before = [at for at, _, _ in placed if at < order[1]]
+    after = [at for at, _, _ in placed if at > order[1]]
+    return {verdict for at, verdict, flags in placed
+            if (before and at == max(before) and flags.get("after"))
+            or (after and at == min(after) and flags.get("before"))}
 
 
 def allows(standard: Readers.OfObject, clause: Readers.OfObject) -> bool:
-    """Whether an edition allows a grammar clause: by its own `Allows` or `Forbids` of it; where it has neither, by the
-    flagged entries of its neighbours, the nearest editions of its standard before and after it, by revision, that name
-    it, an entry before it flagged `after` and one after it flagged `before`, where those agree; otherwise, as a grammar
-    clause no edition names, allowed."""
+    """Whether a stored edition allows a grammar clause: by its own `Allows` or `Forbids` of it; where it has neither,
+    by the flagged entries of its neighbours, the nearest editions of its standard before and after it, by revision,
+    that name it, an entry before it flagged `after` and one after it flagged `before`, where those agree; otherwise,
+    as a grammar clause no edition names, allowed."""
     verdicts = _verdicts(clause)
     own = [allowed for named, allowed, _ in verdicts if named is standard]
     if own:
         return own[0]
     order = _order(standard)
-    placed = [(at[1], allowed, flags) for named, allowed, flags in verdicts
-              if order is not None and (at := _order(named)) is not None and at[0] == order[0] and at[1] != order[1]]
-    before = [at for at, _, _ in placed if at < order[1]] if placed else []
-    after = [at for at, _, _ in placed if at > order[1]] if placed else []
-    guesses = {allowed for at, allowed, flags in placed
-               if (before and at == max(before) and flags.get("after"))
-               or (after and at == min(after) and flags.get("before"))}
+    if order is None:
+        return True
+    guesses = _guesses([(_order(named), allowed, flags) for named, allowed, flags in verdicts], order)
     return guesses.pop() if len(guesses) == 1 else True
+
+
+def _placed(dialect: Readers.OfObject, designation: str, revision: tuple[str, Any]) -> tuple[Any, ...] | None:
+    """Where an edition a dialect does not cover stands, given its designation and its revision: as `_order` places a
+    stored one, its standard that of the dialect's editions whose designations differ from its own only in their
+    revisions' text (`ISO/IEC 9899:2029` C's, `Python 3.16` Python 3's) *(agent)*; None where none does."""
+    def stem(text: str, value: Any) -> str | None:
+        head, found, tail = text.rpartition(str(value))
+        return head + tail if found else None
+
+    own = stem(designation, revision[1])
+    for named, standard in standards(dialect).items():
+        found = properties(standard)
+        theirs: Any = found.get("revision")
+        if own is not None and theirs is not None and theirs[0] == revision[0] and stem(named, theirs[1]) == own:
+            return _at(found.get("number"), revision)
+    return None
+
+
+def edition_allows(dialect: Readers.OfObject, designation: str, revision: tuple[str, Any],
+                   clause: Readers.OfObject) -> bool:
+    """Whether an edition, given by its designation and its revision (`("year", 2029)`, `("version", "3.16")`),
+    allows a grammar clause, whether its dialect covers it or not: as `allows` reads the edition the dialect covers by
+    that designation; where it covers none, the data not representing it, by the flagged entries of its neighbours,
+    the nearest editions of its standard (`_placed`) before and after it that name the grammar clause, where those
+    agree; otherwise allowed."""
+    stored = standards(dialect).get(designation)
+    if stored is not None:
+        return allows(stored, clause)
+    order = _placed(dialect, designation, revision)
+    if order is None:
+        return True
+    guesses = _guesses([(_order(named), allowed, flags) for named, allowed, flags in _verdicts(clause)], order)
+    return guesses.pop() if len(guesses) == 1 else True
+
+
+def edition_has(dialect: Readers.OfObject, designation: str, revision: tuple[str, Any], kind: Any) -> bool:
+    """Whether an edition, given by its designation and its revision, has a kind, given its schema, whether its
+    dialect covers it or not: by its own `Expressions.Framework.HasStandard` entries, where the dialect covers it by
+    that designation; where it covers none, the data not representing it, where a neighbour has it, the nearest edition
+    of its standard (`_placed`) before it that has it, flagged `after`, or the nearest after it, flagged `before`
+    *(agent)*; otherwise not."""
+    stored = standards(dialect).get(designation)
+    if stored is not None:
+        return any(held is kind for held in kinds(stored))
+    order = _placed(dialect, designation, revision)
+    return order is not None and bool(_guesses(
+        [(_order(standard), True, Objects.properties(standard)) for standard in standards(dialect).values()
+         if any(held is kind for held in kinds(standard))], order))
 
 
 # --- Writing a dialect's grammar clauses ---
@@ -250,7 +365,9 @@ class GrammarClause(NamedTuple):
     kind's tag, a helper's schema's name's last part, lowercased: `comprehension`); its `property`; what that property
     may hold, `holds` (`present`, `values` or `kinds`) and `held` (a bool, the values, or the kinds' keys); the names
     of its `nested` grammar clauses; and the editions that allow it, `allowed`, by their symbols in the define's frame,
-    every other edition it covers forbidding it, or None where no edition names it (a grammar clause only nested)."""
+    every other edition it covers forbidding it, or None where no edition names it (a grammar clause only nested or
+    only required); and, of a container, its `quantifier` (`any`, `every` or `none`) and its count, `at_least`; and the
+    names of the grammar clauses it `requires`."""
 
     name: str
     kind: str
@@ -259,35 +376,70 @@ class GrammarClause(NamedTuple):
     held: Any
     nested: tuple[str, ...]
     allowed: tuple[str, ...] | None
+    quantifier: str
+    at_least: int
+    requires: tuple[str, ...]
 
 
 def present(name: str, kind: str, prop: str, allowed: tuple[str, ...] | None) -> GrammarClause:
     """A grammar clause: a kind's property set (a container not empty)."""
-    return GrammarClause(name, kind, prop, "present", True, (), allowed)
+    return GrammarClause(name, kind, prop, "present", True, (), allowed, "any", 1, ())
 
 
 def absent(name: str, kind: str, prop: str, allowed: tuple[str, ...] | None) -> GrammarClause:
     """A grammar clause: a kind's property unset (a container empty)."""
-    return GrammarClause(name, kind, prop, "present", False, (), allowed)
+    return GrammarClause(name, kind, prop, "present", False, (), allowed, "any", 1, ())
 
 
 def values(name: str, kind: str, prop: str, held: tuple[Any, ...], allowed: tuple[str, ...] | None) -> GrammarClause:
     """A grammar clause: a kind's property holding one of these values (a container, one of its elements)."""
-    return GrammarClause(name, kind, prop, "values", held, (), allowed)
+    return GrammarClause(name, kind, prop, "values", held, (), allowed, "any", 1, ())
 
 
 def kinds_of(name: str, kind: str, prop: str, held: tuple[str, ...], nested: tuple[str, ...],
              allowed: tuple[str, ...] | None) -> GrammarClause:
     """A grammar clause: a kind's property holding a term of one of these kinds (a container, one of its elements),
-    which takes each of the `nested` grammar clauses of its kind."""
-    return GrammarClause(name, kind, prop, "kinds", held, nested, allowed)
+    which takes any of the `nested` grammar clauses of its kind, where any is of its kind."""
+    return GrammarClause(name, kind, prop, "kinds", held, nested, allowed, "any", 1, ())
 
 
-def grammar_clauses_spec(txn: Any, clauses: Sequence[GrammarClause], schemas: Mapping[str, Any],
+def every(clause: GrammarClause) -> GrammarClause:
+    """A grammar clause of a container: every element of it holding what `clause` says one holds, and at least one."""
+    return clause._replace(quantifier="every")
+
+
+def none(clause: GrammarClause) -> GrammarClause:
+    """A grammar clause of a container: none of its elements holding what `clause` says one holds."""
+    return clause._replace(quantifier="none")
+
+
+def at_least(count: int, clause: GrammarClause) -> GrammarClause:
+    """A grammar clause of a container: at least `count` of its elements holding what `clause` says one holds (each,
+    where it says the container is set: `at_least(2, present(...))`, two elements or more)."""
+    return clause._replace(at_least=count)
+
+
+def requires(clause: GrammarClause, names: tuple[str, ...]) -> GrammarClause:
+    """A grammar clause taken only where the grammar clauses `names` are taken too, on the same term, each of its kind:
+    two properties together (C23's `u8` character, its `prefix` and its `quote`)."""
+    return clause._replace(requires=names)
+
+
+def editions_spec(editions: Sequence[Sequence[str]]) -> list[Callable[[Any], Any]]:
+    """The specs a dialect's `define` flags its editions with, given them by their symbols in its frame, grouped by
+    standard, each standard's oldest first (C's then C++'s): each standard's oldest edition `before` and its newest
+    `after`, as `grammar_clauses_spec` flags the entries of grammar clauses, so that an edition the data does not
+    represent is guessed to have the kinds its nearest neighbour has (`edition_has`)."""
+    return [lambda _, edition=standard[index], flag=flag: getattr(getattr(_, edition), flag)(True)
+            for standard in editions for index, flag in ((0, "before"), (-1, "after"))]
+
+
+def grammar_clauses_spec(txn: Any, dialect: str, clauses: Sequence[GrammarClause], schemas: Mapping[str, Any],
                          editions: Sequence[Sequence[str]]) -> tuple[dict[str, Any], list[Callable[[Any], Any]]]:
-    """The symbols and the specs a dialect's `define` writes its grammar clauses with, in a frame binding its dialect
-    (`dialect`) and its editions: each grammar clause by `grammar_clause_<its index>`, owned by its name, its kind's
-    and its kinds' schemas by key (`schemas`), and each edition (`editions`, by symbol, each standard's oldest first:
+    """The symbols and the specs a dialect's `define` writes its grammar clauses with, in a frame binding its dialect,
+    by the symbol `dialect`, and its editions: each grammar clause by `grammar_clause_<its index>`, owned by its name,
+    its kind's and its kinds' schemas by key (`schemas`), its quantifier and its count where they are not the default,
+    the grammar clauses it nests and requires, and each edition (`editions`, by symbol, each standard's oldest first:
     Python 3's, or C's then C++'s) allowing it where `allowed` lists it, else forbidding it, each standard's oldest
     edition's entry flagged `before` and its newest's `after`, so that an edition the data does not represent is
     guessed to have what its nearest neighbour has."""
@@ -312,6 +464,12 @@ def grammar_clauses_spec(txn: Any, clauses: Sequence[GrammarClause], schemas: Ma
             else:
                 built = built.kinds([schemas[kind] for kind in clause.held]).nested(
                     [getattr(_, symbol[name]) for name in clause.nested])
+            if clause.quantifier != "any":
+                built = built.quantifier(clause.quantifier)
+            if clause.at_least != 1:
+                built = built.at_least(clause.at_least)
+            if clause.requires:
+                built = built.requires([getattr(_, symbol[name]) for name in clause.requires])
             if clause.allowed is None:
                 return built
             return built.allowed([entry(_, edition) for edition in flagged if edition in clause.allowed]).forbidden(
@@ -319,6 +477,6 @@ def grammar_clauses_spec(txn: Any, clauses: Sequence[GrammarClause], schemas: Ma
         return spec
 
     return ({symbol[clause.name]: GC for clause in clauses},
-            [lambda _: _.dialect.grammar_clauses({
+            [lambda _: getattr(_, dialect).grammar_clauses({
                 clause.name: lambda e, clause=clause: e.clause(getattr(_, symbol[clause.name])) for clause in clauses}),
              *(write(clause) for clause in clauses)])
