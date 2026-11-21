@@ -84,11 +84,12 @@
  * allowed or forbidden by each edition: C++20's `consteval`, `constinit`, `char8_t`, `<=>` and `operator<=>`, `operator
  * co_await`, a lambda's template parameters and `requires`, a pack init-capture, a constrained placeholder (`Number
  * auto`), a type parameter's constraint, a template template parameter's `requires` and `explicit(condition)`; C++23's
- * lambda's attributes and `static`, an explicit object parameter, `auto(x)` and `auto{x}`, and the literal suffixes `z`
- * and `uz`. A subscript of several indices, C++23's, stays unrecorded: it is a count of what a property holds, not what
- * it holds *(agent)*. `DIALECT` reads the
- * kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
- * expression an `idexpression` (`identifier("x")`, and a callee named by a string):
+ * lambda's attributes and `static`, an explicit object parameter, `auto(x)` and `auto{x}`, the literal suffixes `z` and
+ * `uz`, and a subscript of several indices (`at_least` two). What an edition removed is a grammar clause it forbids
+ * *(agent)*: C++17's dynamic exception specification of types (`throw(int)`) and the specifier `register`, allowed by no
+ * edition it covers (`removed`: C++14 is guessed to allow them), and C++20's `throw()`, C++17's alone. `DIALECT` reads
+ * the kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as
+ * an expression an `idexpression` (`identifier("x")`, and a callee named by a string):
  * `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C++
  * source.
  *
@@ -600,7 +601,7 @@ export function define(txn: any): any {
     ...(OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map(
       (b) => [b.name, b.schema] as [string, unknown]),
     ...CLAUSE_HELPERS.map((name) => [name.toLowerCase(), OWN[name].as_schema()] as [string, unknown])]);
-  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, schemas, [C.CPP_EDITIONS]);
+  const [clauses, specs] = FS.grammarClausesSpec(txn, "dialect", GRAMMAR_CLAUSES, schemas, [C.CPP_EDITIONS]);
   /** The kinds an edition has, by its frame symbol: each not in `ONLY`, and each that lists it there. */
   const has = (edition: string): unknown[] => [...every]
     .filter(([tag]) => (ONLY.get(tag) ?? [edition]).includes(edition))
@@ -627,6 +628,8 @@ export function define(txn: any): any {
       (_: any) => _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2024n)).names(
         ["C++23"]).kinds(has("Cpp23")),
       // --- its grammar clauses, each allowed or forbidden by each edition ---
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([C.CPP_EDITIONS]),
       ...specs,
       // --- its domains ---
       (_: any) => _.dialect.domains({
@@ -728,7 +731,7 @@ const CPP20 = ["Cpp20", "Cpp23"], CPP23 = ["Cpp23"];
 /** The helpers its grammar clauses are about, each keyed by its schema's name, lowercased. */
 const CLAUSE_HELPERS: readonly string[] = ["DeclSpecifier", "PrimitiveTypeSpecifier", "OperatorName",
   "LambdaDeclarator", "InitCapture", "PlaceholderTypeSpecifier", "TypeParameter", "TemplateTemplateParameter",
-  "ParameterDeclaration", "ExplicitSpecifier"];
+  "ParameterDeclaration", "ExplicitSpecifier", "ThrowSpecifier"];
 
 /** Its grammar clauses, each with the editions that allow it, every other forbidding it, named as mbse-programs'
  * `Check` names the language feature; `static` among a lambda's specifiers is a nested grammar clause. */
@@ -755,6 +758,11 @@ export const GRAMMAR_CLAUSES: readonly FS.GrammarClause[] = [
   FS.values("literal.suffix 'z' or 'uz'", C.LITERAL, "suffix", ["z", "Z"].flatMap(
     (z) => [z, `u${z}`, `U${z}`, `${z}u`, `${z}U`]), CPP23),
   FS.present("explicitspecifier.condition", "explicitspecifier", "condition", CPP20),
+  FS.atLeast(2, FS.present("subscriptexpression of several indices", C.SUBSCRIPTEXPRESSION, "indices", CPP23)),
+  // removed: C++17 a dynamic exception specification of types and `register`, C++20 `throw()`
+  FS.removed(FS.present("throwspecifier of types", "throwspecifier", "types", [])),
+  FS.absent("throwspecifier without types", "throwspecifier", "types", ["Cpp17"]),
+  FS.removed(FS.values("declspecifier.keyword 'register'", "declspecifier", "keyword", ["register"], [])),
 ];
 
 const ANY1 = new FD.Function([FD.Anything], FD.Anything);

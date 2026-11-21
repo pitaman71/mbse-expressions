@@ -247,7 +247,7 @@ export function define(txn: any): any {
   const every = (OWN.Term.as_schema().branches as { name: string; schema: unknown }[])
     .filter((b) => TAGS.includes(b.name)).map((b) => b.schema);
   const versions = Family.VERSIONS;
-  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map(
+  const [clauses, specs] = FS.grammarClausesSpec(txn, "dialect", GRAMMAR_CLAUSES, new Map(
     (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema])), [versions]);
   return txn.uid("mbse.Expressions.TypeScript.Types.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(versions.map((version) => [version, Standard])),
@@ -257,6 +257,8 @@ export function define(txn: any): any {
         `TypeScript 5.${minor}`, (e: any) => e.standard(_[version])]))),
       ...versions.map((version, minor) => (_: any) => _[version].bodies(["com.microsoft"]).revision(
         (r: any) => r.version(`5.${minor}`)).kinds(every)),
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([versions]),
       ...specs,
     ])]))]);
 }

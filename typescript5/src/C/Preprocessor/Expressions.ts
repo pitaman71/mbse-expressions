@@ -271,7 +271,7 @@ export function define(txn: any): any {
   /** The kinds an edition has, by its frame symbol: each not in `ONLY`, and each that lists it there. */
   const kinds = (edition: string): any[] => every.filter((branch) => (ONLY.get(branch.name) ?? [edition])
     .includes(edition)).map((branch) => branch.schema);
-  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map(
+  const [clauses, specs] = FS.grammarClausesSpec(txn, "dialect", GRAMMAR_CLAUSES, new Map(
     (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema])),
   [K.C_EDITIONS, K.CPP_EDITIONS]);
   return txn.uid("mbse.Expressions.C.Preprocessor.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
@@ -295,6 +295,8 @@ export function define(txn: any): any {
         ["C++20"]).kinds(kinds("Cpp20")),
       (_: any) => _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2024n)).names(
         ["C++23"]).kinds(kinds("Cpp23")),
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([K.C_EDITIONS, K.CPP_EDITIONS]),
       ...specs,
     ])]))]);
 }

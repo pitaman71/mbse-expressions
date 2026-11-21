@@ -482,7 +482,7 @@ export function define(txn: any): any {
     .filter((b) => own.has(b.name) && !EXTENSIONS.has(b.name) && !F.INVALID_KINDS.has(b.name)) // every version's,
     .map((b) => b.schema); // but an extension and invalid syntax
   const MICROSOFT = ["com.microsoft"];
-  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map(
+  const [clauses, specs] = FS.grammarClausesSpec(txn, "dialect", GRAMMAR_CLAUSES, new Map(
     (TypeScript5.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema])),
   [Domains.VERSIONS]);
   const versions = Object.fromEntries(Array.from({ length: 10 }, (_, minor) => [`TypeScript_5_${minor}`, Standard]));
@@ -514,6 +514,8 @@ export function define(txn: any): any {
       (_: any) => _.TypeScript_5_8.bodies(MICROSOFT).revision((r: any) => r.version("5.8")).kinds(every),
       (_: any) => _.TypeScript_5_9.bodies(MICROSOFT).revision((r: any) => r.version("5.9")).kinds(every),
       // --- its grammar clauses, each allowed or forbidden by each version ---
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([Domains.VERSIONS]),
       ...specs,
       // --- its domains ---
       (_: any) => _.dialect.domains({

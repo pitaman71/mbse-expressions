@@ -190,7 +190,7 @@ export function define(txn: any): any {
   const every = new Map((OWN.Term.as_schema().branches as readonly any[]).filter((branch) => TAGS.includes(branch.name))
     .map((branch) => [branch.name, branch.schema] as [string, any]));
   const kinds = X.editions(every, ONLY, Family.SYMBOLS.slice(3));
-  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map<string, unknown>([
+  const [clauses, specs] = FS.grammarClausesSpec(txn, "dialect", GRAMMAR_CLAUSES, new Map<string, unknown>([
     ...(OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map(
       (b) => [b.name, b.schema] as [string, unknown]),
     ["distitem", OWN.DistItem.as_schema()]]), [Family.SYMBOLS.slice(3)]);
@@ -214,6 +214,8 @@ export function define(txn: any): any {
         ["SystemVerilog-2017"]).kinds(kinds[3]),
       (_: any) => _.SystemVerilog_2023.bodies(["org.ieee"]).number("1800").revision((r: any) => r.year(2023n)).names(
         ["SystemVerilog-2023"]).kinds(kinds[4]),
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([Family.SYMBOLS.slice(3)]),
       ...specs,
     ])]))]);
 }

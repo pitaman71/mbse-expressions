@@ -51,8 +51,10 @@
  * reverse-domain name, its `number` and its `revision` (a value of `Expressions.Framework.Revision`: a `year`, an
  * `edition` or a `version`), and its common `names` (`C11`), so that it is found by either; each kind's schema, a
  * `Schemas.OfObject`, records the editions that have it through the extension adjacency `standards`
- * (`Expressions.Framework.HasStandard(kind, standard)`, a set). `Domains` reads stored domains and operations,
- * `Standards` stored standards.
+ * (`Expressions.Framework.HasStandard(kind, standard)`, a set). A standard's oldest edition a dialect covers is flagged
+ * `before`, and its newest `after`, guessing the kinds of an edition the data does not represent: on the edition for
+ * now, pending mbse-schemas' allowing them on `HasStandard`. `Domains` reads stored domains and operations, `Standards`
+ * stored standards.
  *
  * Terms are built through mbse-schemas' builders, in a transaction, and read through its readers: a term's kind is the
  * branch its dialect's `Term` holds, its properties the branch's members. Which properties are a kind's subterms (a
@@ -154,7 +156,7 @@ export function install(txn: any): any {
       Dialect: S.OfUnion, Defines: S.OfRelation, Operates: S.OfRelation,
       Standard: S.OfObject, Revision: S.OfUnion, Covers: S.OfRelation, HasStandard: S.OfRelation,
       GrammarClause: S.OfObject, Specifies: S.OfRelation, HasGrammarClause: S.OfRelation,
-      Holds: S.OfRelation, Nests: S.OfRelation, Allows: S.OfRelation, Forbids: S.OfRelation,
+      Holds: S.OfRelation, Nests: S.OfRelation, Requires: S.OfRelation, Allows: S.OfRelation, Forbids: S.OfRelation,
       OfObject: S.OfObject, // mbse-schemas' own, by name
     })
     .spec([
@@ -237,6 +239,11 @@ export function install(txn: any): any {
         bodies: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfStr])), // by reverse-domain name
         number: S.OfStr, revision: _.Revision,
         names: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfStr])), // its common names
+        // the kinds it has standing for the editions of its standard before or after it that the data does not
+        // represent, only to guess them, as `Allows`'s flags do: for now on the edition, until mbse-schemas allows
+        // properties on `HasStandard`, which a kind's schema reads through an extension adjacency (mbse-schemas'
+        // CAP-116, to be revised there), where they belong
+        before: S.OfBool, after: S.OfBool,
       }).adjacencies({
         dialect: (a: any) => a.relation([_.Covers]).me("standard").owner(true), // its dialect's, its designation
         kinds: (a: any) => a.relation([_.HasStandard]).me("standard"),
@@ -250,7 +257,11 @@ export function install(txn: any): any {
       // A grammar clause: an alternative within a production of a dialect's grammar, owned by the dialect by name: a
       // kind, one of its properties, and what that property may hold there, present or absent (`present`), one of these
       // values (`values`), or a term of one of these kinds (`kinds`), each kind's own subterms held as the nested
-      // grammar clauses of that kind say (`nested`). Each edition allows or forbids it (`Allows`, `Forbids`), `before`
+      // grammar clauses of that kind say (`nested`), any one of them (mbse-basis [PRI-020: no constraint, any
+      // configuration](mbse:mbse-basis/docs/principles/PRI-020.md#decided)). A container holds it where `any` of its
+      // elements holds what it says (the default), `every` one or `none` (`quantifier`), at least `at_least` of them (1
+      // by default); and it is taken only where the grammar clauses it `requires`, of its kind, are taken too, on the
+      // same term (`Requires`). Each edition allows or forbids it (`Allows`, `Forbids`), `before`
       // and `after` extending the entry to the editions before or after its own that the data does not represent, only
       // to guess support for one; a grammar clause no edition names is allowed (mbse-basis
       // [grammar clauses by version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md)).
@@ -258,11 +269,14 @@ export function install(txn: any): any {
         property: S.OfStr, // the property of its kind it is about, by name
         present: S.OfBool, // set, or (false) unset
         values: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfAny((a: any) => a)])), // one of these
+        quantifier: S.OfStr, // `every` or `none` of a container's elements; unset, `any`
+        at_least: S.OfInt, // how many of them, at least; unset, 1
       }).adjacencies({
         dialect: (a: any) => a.relation([_.Specifies]).me("clause").owner(true), // its dialect's, then its name
         kind: (a: any) => a.relation([_.HasGrammarClause]).me("clause"),
         kinds: (a: any) => a.relation([_.Holds]).me("clause"), // a term of one of these kinds
         nested: (a: any) => a.relation([_.Nests]).me("clause"), // what that term's own properties hold
+        requires: (a: any) => a.relation([_.Requires]).me("clause"), // taken with it, on the same term
         allowed: (a: any) => a.relation([_.Allows]).me("clause"),
         forbidden: (a: any) => a.relation([_.Forbids]).me("clause") }),
       (_: any) => _.Specifies.name("Expressions.Framework.Specifies").links([
@@ -276,6 +290,10 @@ export function install(txn: any): any {
       ]).uniques([]), // a set
       (_: any) => _.Nests.name("Expressions.Framework.Nests").links([
         (t: any) => t.name("clause").schema([_.GrammarClause]), (t: any) => t.name("nested").schema([_.GrammarClause]),
+      ]).uniques([]), // a set
+      (_: any) => _.Requires.name("Expressions.Framework.Requires").links([
+        (t: any) => t.name("clause").schema([_.GrammarClause]),
+        (t: any) => t.name("required").schema([_.GrammarClause]),
       ]).uniques([]), // a set
       (_: any) => _.Allows.name("Expressions.Framework.Allows").links([
         (t: any) => t.name("standard").schema([_.Standard]), (t: any) => t.name("clause").schema([_.GrammarClause]),

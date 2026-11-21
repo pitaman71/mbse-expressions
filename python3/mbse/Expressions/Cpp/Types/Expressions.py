@@ -36,7 +36,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from mbse.Expressions.Framework import Terms as F
+from mbse.Expressions.Framework import Standards as FS, Terms as F
 
 from ...C.Expressions import Kinds as K
 
@@ -126,6 +126,8 @@ def define(txn: Any) -> Any:
                 ["C++20"]).kinds(every),
             lambda _: _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2024)).names(
                 ["C++23"]).kinds(every),
+            # --- each standard's oldest edition flagged `before`, its newest `after` ---
+            *FS.editions_spec([K.CPP_EDITIONS]),
         ])]))])
 
 

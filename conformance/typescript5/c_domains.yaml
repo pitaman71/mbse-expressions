@@ -525,6 +525,27 @@ mutations:
                                   i: grammar_clauses
                                   o: dialect
                                   properties:
+                                    name: literal of a character
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: literal of a character
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
                                     name: literal true or false
                                   next:
                                     target: {}
@@ -596,6 +617,27 @@ mutations:
                       mutations:
                       - set:
                           value: literal.base 2
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: 'literal.prefix ''u8'' of a character'
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: 'literal.prefix ''u8'' of a character'
                 - mutations:
                   - as_link:
                       name: clause

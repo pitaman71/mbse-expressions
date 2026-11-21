@@ -244,7 +244,7 @@ def define(txn: Any) -> Any:
     OWN, Standard = txn.Expressions.TypeScript.Types, txn.Expressions.Framework.Standard
     every = [branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS]
     versions = _family.VERSIONS
-    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, {
+    clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES, {
         branch.name: branch.schema for branch in OWN.Term.as_schema().branches}, [versions])
     return txn.uid("mbse.Expressions.TypeScript.Types.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, **{version: Standard for version in versions}, **clauses})
@@ -253,6 +253,8 @@ def define(txn: Any) -> Any:
                                            for minor, version in enumerate(versions)}),
             *[lambda _, minor=minor, version=version: getattr(_, version).bodies(["com.microsoft"]).revision(
                 lambda r: r.version(f"5.{minor}")).kinds(every) for minor, version in enumerate(versions)],
+            # --- each standard's oldest edition flagged `before`, its newest `after` ---
+            *FS.editions_spec([versions]),
             *specs,
         ])]))])
 

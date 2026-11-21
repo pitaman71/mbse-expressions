@@ -278,8 +278,11 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    (`ISO/IEC 9899:2011`) and holding its common names (`C11`) and the kinds it has: find one by either tag with
    `Standards.find`, and read it with `Standards.properties` and `Standards.kinds`. What an edition changes within a
    kind is data as well, a grammar clause each edition allows or forbids (a binop's `@`, C23's digit separators): ask
-   which a term takes with `Standards.takes` and whether an edition allows one with `Standards.allows` (mbse-basis
-   [grammar clauses by version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md)).
+   which a term takes with `Standards.takes`, each with the elements of a container that took it, and whether an
+   edition allows one with `Standards.allows`; for an edition given by its designation and its revision, stored or
+   not (Python 3.16, C2y), ask `Standards.edition_allows` and, of a kind, `Standards.edition_has`, which guess one the
+   data does not represent from its neighbours (mbse-basis [grammar clauses by
+   version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md)).
    `DIALECT.infer(expression, domains)` finds a term's domain from its
    vocabulary's signatures, in code, and the domains its variables are given; a quantifier's name has its items'
    domain. For Patterns these are its values' natives' domains (`int`, `float`, ...) until domain inference reads the
@@ -398,7 +401,7 @@ each case shows its own:
 - **Names.** The API is the same name for name, snake_case included (`Domains.items_of`), except the framework's
   reads, camelCase in TypeScript: of terms, `Terms.name_of`, `kind_of`, `dialect_of` and `attributes_of` are
   `Terms.nameOf`, `kindOf`, `dialectOf` and `attributesOf` (a `Map`); of domains, `Domains.kind_of` and `name_of` are
-  `Domains.kindOf` and `nameOf`; of standards, `Standards.designation_of` is `Standards.designationOf` and `Standards.grammar_clause_name` `Standards.grammarClauseName`. A translator's pattern takes its attributes by keyword in Python
+  `Domains.kindOf` and `nameOf`; of standards, `Standards.designation_of` is `Standards.designationOf`, `Standards.grammar_clause_name` `Standards.grammarClauseName`, and `edition_allows` and `edition_has` `editionAllows` and `editionHas`. A translator's pattern takes its attributes by keyword in Python
   (`Pattern("call", A, B, callable="eq")`), first in TypeScript (`new Pattern("call", { callable: "eq" }, A, B)`).
   TypeScript makes an object of a class with `new` (`new Hole("A")`, `new Pairwise(...)`, `new Scope(...)`), where
   Python calls the class.

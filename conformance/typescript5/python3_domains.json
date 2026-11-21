@@ -1542,6 +1542,50 @@
                                     }
                                   }
                                 ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "clause",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "reference": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "grammar_clauses",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "variable.name 'async' or 'await'"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "variable.name 'async' or 'await'"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
                               }
                             ]
                           }

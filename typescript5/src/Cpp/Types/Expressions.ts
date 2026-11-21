@@ -34,6 +34,7 @@
  * [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided)). */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as K from "../../C/Expressions/Kinds.js";
 import * as CPreprocessor from "../../C/Preprocessor/Expressions.js";
@@ -128,6 +129,8 @@ export function define(txn: any): any {
         ["C++20"]).kinds(every),
       (_: any) => _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2024n)).names(
         ["C++23"]).kinds(every),
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([K.CPP_EDITIONS]),
     ])]))]);
 }
 

@@ -105,6 +105,18 @@
                     }
                   },
                   {
+                    "as_property": {
+                      "name": "after",
+                      "mutations": [
+                        {
+                          "set": {
+                            "value": true
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
                     "as_adjacency": {
                       "name": "dialect",
                       "mutations": [
@@ -1624,6 +1636,50 @@
                                                     "o": "dialect",
                                                     "properties": {
                                                       "name": "alignofexpression.keyword 'alignof'"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "clause",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "reference": {
+                                              "path": {
+                                                "singleton": "Expressions.C.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "grammar_clauses",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "literal.prefix 'u8' of a character"
                                                     },
                                                     "next": {
                                                       "target": {}

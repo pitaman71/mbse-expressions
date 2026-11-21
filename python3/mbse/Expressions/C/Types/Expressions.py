@@ -271,7 +271,7 @@ def define(txn: Any) -> Any:
     every = [branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS]
     schemas = {**{branch.name: branch.schema for branch in OWN.Term.as_schema().branches},
                **{name.lower(): getattr(OWN, name).as_schema() for name in HELPERS}}
-    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, schemas, [K.C_EDITIONS])
+    clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES, schemas, [K.C_EDITIONS])
     return txn.uid("mbse.Expressions.C.Types.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, "C11": Standard, "C17": Standard, "C23": Standard, **clauses})
         .spec([
@@ -284,6 +284,8 @@ def define(txn: Any) -> Any:
                 ["C17"]).kinds(every),
             lambda _: _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2024)).names(
                 ["C23"]).kinds(every),
+            # --- each standard's oldest edition flagged `before`, its newest `after` ---
+            *FS.editions_spec([K.C_EDITIONS]),
             *specs,
         ])]))])
 

@@ -123,7 +123,7 @@ export function define(txn: any): any {
   const [OWN, Standard] = [txn.Expressions.Python.Types, txn.Expressions.Framework.Standard];
   const every = (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).filter((b) => TAGS.includes(b.name));
   const minors = Array.from({ length: 16 }, (_, minor) => minor);
-  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES,
+  const [clauses, specs] = FS.grammarClausesSpec(txn, "dialect", GRAMMAR_CLAUSES,
     new Map(every.map((b) => [b.name, b.schema])), [Family.VERSIONS]);
   const version = (minor: number) => (_: any) => _[`Python_3_${minor}`].bodies(["org.python"]).revision(
     (r: any) => r.version(`3.${minor}`)).kinds(every.filter(
@@ -135,6 +135,8 @@ export function define(txn: any): any {
       (_: any) => _.dialect.standards(Object.fromEntries(minors.map((minor) => [`Python 3.${minor}`,
         (e: any) => e.standard(_[`Python_3_${minor}`])]))),
       ...minors.map(version),
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([Family.VERSIONS]),
       ...specs,
     ])]))]);
 }

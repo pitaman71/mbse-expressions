@@ -3021,8 +3021,9 @@ no representation. And a grammar clause that has no `Allows` or `Forbids` should
 435. **What a term takes** *(agent)*: `Framework.Standards.takes(dialect, term)`, the grammar clauses of the dialect of
      the term's kind (or a helper's: `comprehension`, `arguments`) whose property holds what they say: a value among
      `values` (of the same type: `True` is not `1`, as in TypeScript), set or unset (a container empty is unset), or a
-     term of one of `kinds` that takes each nested grammar clause of its kind. A container holds what one of its
-     elements does. Nothing within the term is read but what its grammar clauses' properties hold: a caller walks the
+     term of one of `kinds` that takes any nested grammar clause of its kind (item 446). A container holds what one of
+     its elements does, or as its quantifier and count say (item 446); each grammar clause comes with the elements that
+     took it (item 447). Nothing within the term is read but what its grammar clauses' properties hold: a caller walks the
      tree, as mbse-programs' `Check` walks it. A nested grammar clause is a grammar clause like any, owned by its
      dialect and taken where its kind's term is read alone; one no edition names is allowed by every edition.
 436. **Whether an edition allows one** *(agent, building the user's decision)*: `Framework.Standards.allows(standard,
@@ -3038,8 +3039,8 @@ no representation. And a grammar clause that has no `Allows` or `Forbids` should
 438. **How a define writes them** *(agent)*: each dialect's table, `GRAMMAR_CLAUSES`, of `Framework.Standards`'
      `present`, `absent`, `values` and `kinds_of` (TypeScript `kindsOf`), each its name, its kind (by tag, a helper by its
      schema's name lowercased), its property, what it holds, its nested grammar clauses' names and the editions that
-     allow it by frame symbol (None, `null`, for one only nested); `grammar_clauses_spec(txn, clauses, schemas,
-     editions)` (`grammarClausesSpec`) gives the define's symbols (`grammar_clause_<index>`) and specs: each covered
+     allow it by frame symbol (None, `null`, for one only nested); `grammar_clauses_spec(txn, dialect, clauses, schemas,
+     editions)` (`grammarClausesSpec`, its dialect by the caller's frame symbol, item 448) gives the define's symbols (`grammar_clause_<index>`) and specs: each covered
      edition allows it or forbids it, explicitly, and each standard's oldest edition's entry is flagged `before` and its
      newest's `after` (`editions` grouped by standard: C Preprocessor's C's then C++'s, SystemVerilog Preprocessor's
      IEEE 1364's then IEEE 1800's), so an edition outside the data is guessed as its nearest is.
@@ -3070,8 +3071,7 @@ no representation. And a grammar clause that has no `Allows` or `Forbids` should
      Constraints' 2 (`soft` IEEE 1800-2012, a default distribution item 2023), SystemVerilog Preprocessor's 1 (an
      `` `ifdef ``'s `` `elsif `` branches, IEEE 1364-2001) and POSIX ERE's 1 (a repetition modifier, POSIX.1-2024).
      Python Patterns, TypeScript Patterns, C++ Types, C++ RegExp, POSIX BRE and SystemVerilog's other four have none.
-441. **What stays code**, as no grammar clause, one property's holding, says it *(agent)*: C's `u8` character literal
-     (its `prefix` and its `quote` together); C++23's subscript of several indices (a count); Python RegExp's `\N{...}`
+441. **What stays code**, as no grammar clause says it *(agent)*: Python RegExp's `\N{...}`
      and `\z` (no property tells them: a character's spelling, and `\z` an assertion `stringend` as `\Z` is); POSIX
      BRE's `\|`, `\?` and `\+`, which POSIX.1-2024 leaves to the implementation; and every statement's language
      feature, mbse-programs' `STATEMENT_FEATURES`, stage 2's, PEP 614's decorator among them, a statement's. C++17's
@@ -3089,6 +3089,74 @@ no representation. And a grammar clause that has no `Allows` or `Forbids` should
 444. **The version**: 0.15.0, a breaking change (PRI-031): every `SINCE` removed, and the standards' data changed.
      0.13.0 is mbse-schemas 0.33.0's move and 0.14.0 mbse-schemas 0.34.0's (#80), which merged before the grammar
      clauses (#79), so these are the next minor.
+
+## Settled in grammar clauses by version, stage 3, for the user's review
+
+Stage 3 of mbse-basis' [grammar clauses by version](https://github.com/pitaman71/mbse-basis/blob/main/proposals/GRAMMAR-CLAUSES.md),
+mbse-expressions' half, as the user decided, on the four: "1. I already confirmed that" (the guess for an edition the
+data does not represent), "2. that's fine" (the grammar clause's further forms), "3. yes" (removals as `Forbids`), "4.
+yes" (the two API fixes).
+
+445. **An edition the data does not represent** *(agent: the API)*: `Framework.Standards.edition_allows(dialect,
+     designation, revision, clause)` (`editionAllows`) and `edition_has(dialect, designation, revision, kind)`
+     (`editionHas`), an edition given by its designation and its revision (`("version", "3.16")`, `["year", 2029n]`),
+     separate calls beside `allows(standard, clause)` and `of(dialect, kind)`, which take a stored edition. An edition
+     the dialect covers by that designation answers by its own entries; one it does not is placed among the dialect's
+     editions of its standard, those whose designations differ from its own only in their revisions' text (`ISO/IEC
+     9899:2029` among C's, `Python 3.16` among Python 3's) *(agent)*, and guessed from the nearest before it flagged
+     `after` and the nearest after it flagged `before`: a grammar clause, where they agree, else allowed; a kind, where
+     either has it, else not *(agent)*. One of no standard the dialect covers, or whose designation holds no revision,
+     is allowed every grammar clause and has no kind.
+446. **The grammar clause's further forms** (option (a)): `GrammarClause`'s properties `quantifier` (`every` or `none`;
+     unset, `any`) and `at_least` (an int; unset, 1), and `Expressions.Framework.Requires(clause, required)`, a set,
+     its adjacency `requires`. A container holds it where at least `at_least` of its elements hold what it says
+     (`any`), where every one does and at least `at_least` (`every`: an empty container does not), or where none does
+     (`none`: an empty or unset one does) *(agent)*; a property set (`present`) is held by each of its elements
+     (`at_least(2, present(...))`, two elements or more); a grammar clause is taken only where each it requires, of
+     its kind, is taken on the same term; and a held term takes the nested grammar clauses of its kind where it takes
+     any of them, or none is of its kind, as [PRI-020](https://github.com/pitaman71/mbse-basis/blob/main/docs/principles/PRI-020.md#decided)
+     reads unions, where stage 1 required each. The writer: `every(clause)`, `none(clause)`, `at_least(count, clause)`
+     (`atLeast`) and `requires(clause, names)`, each a grammar clause of `present`, `absent`, `values` or `kinds_of`
+     given that form, and `GrammarClause`'s fields `quantifier`, `at_least` (`atLeast`) and `requires`.
+447. **`takes` per element** *(agent: the shape)*: `takes(dialect, term)` gives a list of pairs, each a grammar clause
+     taken and the indices of the elements of its property that took it, where that property is a container and the
+     grammar clause says what an element holds (`values` or `kinds`, `any` or `every`), else None (`null`): the
+     property as a whole (set or unset, a scalar, a count of `present`, `none`). The whole-property answer, the
+     grammar clauses taken, is each pair's first. A breaking change: mbse-programs' `Check` reads `takes`.
+448. **The writer's dialect**: `grammar_clauses_spec(txn, dialect, clauses, schemas, editions)`, the frame symbol of
+     the dialect that owns the grammar clauses the caller's (every define here passes `"dialect"`), no longer a fixed
+     `dialect`. A breaking change: mbse-programs' `Standards.define`s call it.
+449. **A kind's membership flagged**: as decided, each standard's oldest edition `before` and its newest `after`. They
+     belong on `HasStandard`, as the user decided, once mbse-schemas allows properties on a relation an extension
+     adjacency reads (its CAP-116, Decided 18 and 22, to be revised there). Until then, temporarily and not as a
+     decision, they are on the edition, `Expressions.Framework.Standard`'s bools `before` and `after`: mbse-schemas
+     refuses an extension adjacency (a kind's schema's `standards`) to a relation with
+     properties ("an extension's adjacency 'standards' is to a relation of two links and no properties"), and
+     `Covers`, the dialect's mapping by designation, takes one property alone. `editions_spec(editions)`
+     (`editionsSpec`) gives the specs that flag them, editions grouped by standard as for `grammar_clauses_spec`; every
+     dialect with kinds writes them (Python3 and its family, TypeScript5 and its family, C, C Types, C Preprocessor
+     C's and C++'s, C++, C++ Types, C++ RegExp, POSIX BRE and ERE, SystemVerilog's six IEEE 1364's and IEEE 1800's).
+     `properties(standard)` leaves the flags out, no part of its reference.
+450. **The data**: C's `literal.prefix 'u8' of a character` (C23), requiring `literal of a character` (its `quote`
+     `'`, no edition naming it), and C++'s `subscriptexpression of several indices` (`at_least` 2 of its `indices`,
+     C++23), both former code (item 441). Removals, each forbidden from the edition that removed it *(agent: found
+     beyond the docstrings, which name none)*: Python3's `variable.name 'async' or 'await'` (Python 3.0 to 3.6, 3.7
+     reserving them), C++'s `throwspecifier of types` (`throw(int)`, removed by C++17, allowed by no edition it covers),
+     `throwspecifier without types` (`throw()`, C++17 alone) and `declspecifier.keyword 'register'` (removed by C++17;
+     a `DeclSpecifier` is C++ Expressions' helper, which mbse-programs' declarations hold too), C++'s
+     `ThrowSpecifier` among the helpers its grammar clauses are about. Python3 has 11 grammar clauses, C 9, C++ 23.
+     Each `Allows` and `Forbids` entry is flagged by what is true beyond it, as the user decided: a construct the
+     oldest covered edition forbids is one added later, its entry flagged `before`, unless it records a removal by that
+     edition or one before it, `removed(clause)` (TypeScript `removed`, `GrammarClause`'s field `removed`), whose
+     entries are not: C++14 is guessed to allow `throw(int)` and `register`, Python 2.7 a name `async`.
+451. **Tests**: FRM-14 extended in both languages: the model (`quantifier`, `at_least`, `Requires`), `takes`' pairs
+     (a container's indices, None for a scalar), the recorded data and the removals, an edition by designation (Python
+     3.16 and 2.7, C2y, C99, one between two, another standard's, one whose designation holds no revision) for a
+     grammar clause and a kind, and, in a cell of its own, each form through the writer in a frame binding Patterns'
+     dialect as `language`; FRM-13 the flags on each standard's oldest and newest editions.
+452. **The corpus**: `standards` (C23's `after`), `c_domains`, `cpp_domains` and `python3_domains` regenerated,
+     byte-identical in both languages.
+453. **The version**: 0.16.0, a breaking change (PRI-031): `takes`' result and `grammar_clauses_spec`'s signature.
 
 ## What stage 2b needed (done)
 

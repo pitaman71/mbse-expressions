@@ -240,7 +240,7 @@ export function define(txn: any): any {
   const edition = (index: number, [revision, value]: Edition[1], names: readonly string[]) => (e: any) => e
     .bodies(["org.ecma-international"]).number("262").revision((r: any) => r[revision](value)).names([...names])
     .kinds(every.filter((b) => (ONLY.get(b.name) ?? SYMBOLS).includes(SYMBOLS[index]!)).map((b) => b.schema));
-  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map<string, unknown>([
+  const [clauses, specs] = FS.grammarClausesSpec(txn, "dialect", GRAMMAR_CLAUSES, new Map<string, unknown>([
     ...every.map((b) => [b.name, b.schema] as [string, unknown]), ["flags", OWN.Flags.as_schema()]]), [SYMBOLS]);
   return txn.uid("mbse.Expressions.TypeScript.RegExp.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(SYMBOLS.map((symbol) => [symbol, Standard])), ...clauses })
@@ -248,6 +248,8 @@ export function define(txn: any): any {
       (_: any) => _.dialect.standards(Object.fromEntries(EDITIONS.map(([designation, , , symbol]) => [
         designation, (e: any) => e.standard(_[symbol])]))),
       ...EDITIONS.map(([, revision, names, symbol], i) => (_: any) => edition(i, revision, names)(_[symbol])),
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([SYMBOLS]),
       ...specs,
     ])]))]);
 }

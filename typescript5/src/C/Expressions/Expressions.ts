@@ -71,8 +71,8 @@
  * syntax), every kind in each but `constant` (`nullptr`), C23's alone, and an extension in none. What an edition
  * changes within a kind is data, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition,
  * C23's: a literal's digit separators, a binary integer, the suffix `wb` and the decimal floating suffixes, `true` and
- * `false`, an empty initializer, `{}`, and `alignof` spelled so. A `u8` character literal, C23's, stays unrecorded: it
- * is two properties' values together, `prefix` and `quote`, where a grammar clause is about one *(agent)*. `DIALECT`
+ * `false`, an empty initializer, `{}`, `alignof` spelled so, and a `u8` character literal, its `prefix` and its `quote`
+ * together (a grammar clause that `requires` another, `literal of a character`, which no edition names). `DIALECT`
  * reads the kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...) write the kinds C
  * evaluated before it was complete through the builders, in a transaction, a cast's type a spec of C Types' `Term`,
  * written through the builders too: `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other
@@ -140,6 +140,9 @@ export const GRAMMAR_CLAUSES: readonly FS.GrammarClause[] = [
   FS.values("literal true or false", LITERAL, "value", [true, false], C23),
   FS.absent("initializerlist without items", INITIALIZERLIST, "items", C23),
   FS.values("alignofexpression.keyword 'alignof'", ALIGNOFEXPRESSION, "keyword", ["alignof"], C23),
+  FS.requires(FS.values("literal.prefix 'u8' of a character", LITERAL, "prefix", ["u8"], C23),
+    ["literal of a character"]), // `u8'a'`: its prefix and its quote together
+  FS.values("literal of a character", LITERAL, "quote", ["'"], null), // required: no edition names it
 ];
 
 // where its grammar hands off to mbse-programs' statements: the framework's readers do not enter it
@@ -367,7 +370,7 @@ export function define(txn: any): any {
   const every = new Map((OWN.Term.as_schema().branches as { name: string; schema: unknown }[]) // each of its own
     .filter((b) => C_TAGS.includes(b.name) && !EXTENSIONS.has(b.name)) // kinds' schema, by its tag, but an extension
     .map((b) => [b.name, b.schema]));
-  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map(
+  const [clauses, specs] = FS.grammarClausesSpec(txn, "dialect", GRAMMAR_CLAUSES, new Map(
     (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema])),
   [C_EDITIONS]);
   return txn.uid("mbse.Expressions.C.Expressions.define/1")
@@ -395,6 +398,8 @@ export function define(txn: any): any {
         ["C23"]).kinds(
         [...every.values()]),
       // --- its grammar clauses, each allowed or forbidden by each edition ---
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([C_EDITIONS]),
       ...specs,
       // --- its domains ---
       (_: any) => _.dialect.domains({
