@@ -504,6 +504,27 @@ mutations:
                                   i: grammar_clauses
                                   o: dialect
                                   properties:
+                                    name: declspecifier.keyword 'register'
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: declspecifier.keyword 'register'
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
                                     name: declspecifier.keyword 'static'
                                   next:
                                     target: {}
@@ -798,6 +819,27 @@ mutations:
                                   i: grammar_clauses
                                   o: dialect
                                   properties:
+                                    name: subscriptexpression of several indices
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: subscriptexpression of several indices
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
                                     name: templatetemplateparameter.requires
                                   next:
                                     target: {}
@@ -806,6 +848,48 @@ mutations:
                       mutations:
                       - set:
                           value: templatetemplateparameter.requires
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: throwspecifier of types
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: throwspecifier of types
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: throwspecifier without types
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: throwspecifier without types
                 - mutations:
                   - as_link:
                       name: clause
