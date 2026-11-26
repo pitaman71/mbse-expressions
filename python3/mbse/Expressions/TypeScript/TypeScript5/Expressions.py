@@ -467,7 +467,7 @@ def define(txn: Any) -> Any:
                   "boolean": Domain, "number": Domain, "bigint": Domain,
                   "string": Domain, "null": Domain, **clauses})
         .spec([
-            # --- the versions of TypeScript 5 it covers, each by its published name, with the kinds it has: all ---
+            # --- the versions of TypeScript 5 it covers, each by its published name ---
             lambda _: _.dialect.standards({
                 "TypeScript 5.0": lambda e: e.standard(_.TypeScript_5_0),
                 "TypeScript 5.1": lambda e: e.standard(_.TypeScript_5_1),
@@ -480,19 +480,19 @@ def define(txn: Any) -> Any:
                 "TypeScript 5.8": lambda e: e.standard(_.TypeScript_5_8),
                 "TypeScript 5.9": lambda e: e.standard(_.TypeScript_5_9),
             }),
-            lambda _: _.TypeScript_5_0.bodies(MICROSOFT).revision(lambda r: r.version("5.0")).kinds(every),
-            lambda _: _.TypeScript_5_1.bodies(MICROSOFT).revision(lambda r: r.version("5.1")).kinds(every),
-            lambda _: _.TypeScript_5_2.bodies(MICROSOFT).revision(lambda r: r.version("5.2")).kinds(every),
-            lambda _: _.TypeScript_5_3.bodies(MICROSOFT).revision(lambda r: r.version("5.3")).kinds(every),
-            lambda _: _.TypeScript_5_4.bodies(MICROSOFT).revision(lambda r: r.version("5.4")).kinds(every),
-            lambda _: _.TypeScript_5_5.bodies(MICROSOFT).revision(lambda r: r.version("5.5")).kinds(every),
-            lambda _: _.TypeScript_5_6.bodies(MICROSOFT).revision(lambda r: r.version("5.6")).kinds(every),
-            lambda _: _.TypeScript_5_7.bodies(MICROSOFT).revision(lambda r: r.version("5.7")).kinds(every),
-            lambda _: _.TypeScript_5_8.bodies(MICROSOFT).revision(lambda r: r.version("5.8")).kinds(every),
-            lambda _: _.TypeScript_5_9.bodies(MICROSOFT).revision(lambda r: r.version("5.9")).kinds(every),
+            lambda _: _.TypeScript_5_0.bodies(MICROSOFT).revision(lambda r: r.version("5.0")),
+            lambda _: _.TypeScript_5_1.bodies(MICROSOFT).revision(lambda r: r.version("5.1")),
+            lambda _: _.TypeScript_5_2.bodies(MICROSOFT).revision(lambda r: r.version("5.2")),
+            lambda _: _.TypeScript_5_3.bodies(MICROSOFT).revision(lambda r: r.version("5.3")),
+            lambda _: _.TypeScript_5_4.bodies(MICROSOFT).revision(lambda r: r.version("5.4")),
+            lambda _: _.TypeScript_5_5.bodies(MICROSOFT).revision(lambda r: r.version("5.5")),
+            lambda _: _.TypeScript_5_6.bodies(MICROSOFT).revision(lambda r: r.version("5.6")),
+            lambda _: _.TypeScript_5_7.bodies(MICROSOFT).revision(lambda r: r.version("5.7")),
+            lambda _: _.TypeScript_5_8.bodies(MICROSOFT).revision(lambda r: r.version("5.8")),
+            lambda _: _.TypeScript_5_9.bodies(MICROSOFT).revision(lambda r: r.version("5.9")),
             # --- its grammar clauses, each allowed or forbidden by each version ---
-            # --- each standard's oldest edition flagged `before`, its newest `after` ---
-            *FS.editions_spec([Domains.VERSIONS]),
+            # --- the kinds each edition has, each entry flagged by what is true beyond it ---
+            *FS.editions_spec([Domains.VERSIONS], dict.fromkeys(Domains.VERSIONS, every)),
             *specs,
             # --- its domains ---
             lambda _: _.dialect.domains({

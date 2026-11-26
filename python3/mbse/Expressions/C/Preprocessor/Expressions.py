@@ -274,19 +274,20 @@ def define(txn: Any) -> Any:
                 "ISO/IEC 14882:2020": lambda e: e.standard(_.Cpp20),
                 "ISO/IEC 14882:2024": lambda e: e.standard(_.Cpp23)}),
             lambda _: _.C11.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2011)).names(
-                ["C11"]).kinds(kinds("C11")),
+                ["C11"]),
             lambda _: _.C17.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2018)).names(
-                ["C17"]).kinds(kinds("C17")),
+                ["C17"]),
             lambda _: _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2024)).names(
-                ["C23"]).kinds(kinds("C23")),
+                ["C23"]),
             lambda _: _.Cpp17.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2017)).names(
-                ["C++17"]).kinds(kinds("Cpp17")),
+                ["C++17"]),
             lambda _: _.Cpp20.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2020)).names(
-                ["C++20"]).kinds(kinds("Cpp20")),
+                ["C++20"]),
             lambda _: _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2024)).names(
-                ["C++23"]).kinds(kinds("Cpp23")),
-            # --- each standard's oldest edition flagged `before`, its newest `after` ---
-            *FS.editions_spec([K.C_EDITIONS, K.CPP_EDITIONS]),
+                ["C++23"]),
+            # --- the kinds each edition has, each entry flagged by what is true beyond it ---
+            *FS.editions_spec([K.C_EDITIONS, K.CPP_EDITIONS], {
+                edition: kinds(edition) for edition in (*K.C_EDITIONS, *K.CPP_EDITIONS)}),
             *specs,
         ])]))])
 

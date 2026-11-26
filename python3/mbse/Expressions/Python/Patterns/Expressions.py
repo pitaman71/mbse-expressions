@@ -145,10 +145,11 @@ def define(txn: Any) -> Any:
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS}
     minors = range(10, 16)
 
+    symbols = [f"Python_3_{minor}" for minor in minors]
+
     def version(minor: int) -> Callable[[Any], Any]:
-        kinds = list(every.values())
         return lambda _: getattr(_, f"Python_3_{minor}").bodies(["org.python"]).revision(
-            lambda r: r.version(f"3.{minor}")).kinds(kinds)
+            lambda r: r.version(f"3.{minor}"))
 
     return txn.uid("mbse.Expressions.Python.Patterns.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, **{f"Python_3_{minor}": Standard for minor in minors}})
@@ -156,8 +157,8 @@ def define(txn: Any) -> Any:
             lambda _: _.dialect.standards({f"Python 3.{minor}": lambda e, minor=minor: e.standard(
                 getattr(_, f"Python_3_{minor}")) for minor in minors}),
             *(version(minor) for minor in minors),
-            # --- each standard's oldest edition flagged `before`, its newest `after` ---
-            *FS.editions_spec([[f"Python_3_{minor}" for minor in minors]]),
+            # --- the kinds each edition has, each entry flagged by what is true beyond it ---
+            *FS.editions_spec([symbols], dict.fromkeys(symbols, list(every.values()))),
         ])]))])
 
 

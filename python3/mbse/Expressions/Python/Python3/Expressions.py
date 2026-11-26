@@ -411,7 +411,7 @@ def define(txn: Any) -> Any:
                   "bool": Domain, "int": Domain, "float": Domain, "str": Domain,
                   "bytes": Domain, "NoneType": Domain, "ellipsis": Domain, **clauses})
         .spec([
-            # --- the versions of Python 3 it covers, each by its published name, with the kinds it has ---
+            # --- the versions of Python 3 it covers, each by its published name ---
             lambda _: _.dialect.standards({
                 "Python 3.0": lambda e: e.standard(_.Python_3_0), "Python 3.1": lambda e: e.standard(_.Python_3_1),
                 "Python 3.2": lambda e: e.standard(_.Python_3_2), "Python 3.3": lambda e: e.standard(_.Python_3_3),
@@ -422,25 +422,25 @@ def define(txn: Any) -> Any:
                 "Python 3.12": lambda e: e.standard(_.Python_3_12), "Python 3.13": lambda e: e.standard(_.Python_3_13),
                 "Python 3.14": lambda e: e.standard(_.Python_3_14), "Python 3.15": lambda e: e.standard(_.Python_3_15),
             }),
-            lambda _: _.Python_3_0.bodies(PSF).revision(lambda r: r.version("3.0")).kinds(has(0)),
-            lambda _: _.Python_3_1.bodies(PSF).revision(lambda r: r.version("3.1")).kinds(has(1)),
-            lambda _: _.Python_3_2.bodies(PSF).revision(lambda r: r.version("3.2")).kinds(has(2)),
-            lambda _: _.Python_3_3.bodies(PSF).revision(lambda r: r.version("3.3")).kinds(has(3)),
-            lambda _: _.Python_3_4.bodies(PSF).revision(lambda r: r.version("3.4")).kinds(has(4)),
-            lambda _: _.Python_3_5.bodies(PSF).revision(lambda r: r.version("3.5")).kinds(has(5)),
-            lambda _: _.Python_3_6.bodies(PSF).revision(lambda r: r.version("3.6")).kinds(has(6)),
-            lambda _: _.Python_3_7.bodies(PSF).revision(lambda r: r.version("3.7")).kinds(has(7)),
-            lambda _: _.Python_3_8.bodies(PSF).revision(lambda r: r.version("3.8")).kinds(has(8)),
-            lambda _: _.Python_3_9.bodies(PSF).revision(lambda r: r.version("3.9")).kinds(has(9)),
-            lambda _: _.Python_3_10.bodies(PSF).revision(lambda r: r.version("3.10")).kinds(has(10)),
-            lambda _: _.Python_3_11.bodies(PSF).revision(lambda r: r.version("3.11")).kinds(has(11)),
-            lambda _: _.Python_3_12.bodies(PSF).revision(lambda r: r.version("3.12")).kinds(has(12)),
-            lambda _: _.Python_3_13.bodies(PSF).revision(lambda r: r.version("3.13")).kinds(has(13)),
-            lambda _: _.Python_3_14.bodies(PSF).revision(lambda r: r.version("3.14")).kinds(has(14)),
-            lambda _: _.Python_3_15.bodies(PSF).revision(lambda r: r.version("3.15")).kinds(has(15)),
+            lambda _: _.Python_3_0.bodies(PSF).revision(lambda r: r.version("3.0")),
+            lambda _: _.Python_3_1.bodies(PSF).revision(lambda r: r.version("3.1")),
+            lambda _: _.Python_3_2.bodies(PSF).revision(lambda r: r.version("3.2")),
+            lambda _: _.Python_3_3.bodies(PSF).revision(lambda r: r.version("3.3")),
+            lambda _: _.Python_3_4.bodies(PSF).revision(lambda r: r.version("3.4")),
+            lambda _: _.Python_3_5.bodies(PSF).revision(lambda r: r.version("3.5")),
+            lambda _: _.Python_3_6.bodies(PSF).revision(lambda r: r.version("3.6")),
+            lambda _: _.Python_3_7.bodies(PSF).revision(lambda r: r.version("3.7")),
+            lambda _: _.Python_3_8.bodies(PSF).revision(lambda r: r.version("3.8")),
+            lambda _: _.Python_3_9.bodies(PSF).revision(lambda r: r.version("3.9")),
+            lambda _: _.Python_3_10.bodies(PSF).revision(lambda r: r.version("3.10")),
+            lambda _: _.Python_3_11.bodies(PSF).revision(lambda r: r.version("3.11")),
+            lambda _: _.Python_3_12.bodies(PSF).revision(lambda r: r.version("3.12")),
+            lambda _: _.Python_3_13.bodies(PSF).revision(lambda r: r.version("3.13")),
+            lambda _: _.Python_3_14.bodies(PSF).revision(lambda r: r.version("3.14")),
+            lambda _: _.Python_3_15.bodies(PSF).revision(lambda r: r.version("3.15")),
             # --- its grammar clauses, each allowed or forbidden by each version ---
-            # --- each standard's oldest edition flagged `before`, its newest `after` ---
-            *FS.editions_spec([VERSIONS]),
+            # --- the kinds each edition has, each entry flagged by what is true beyond it ---
+            *FS.editions_spec([VERSIONS], {symbol: has(minor) for minor, symbol in enumerate(VERSIONS)}),
             *specs,
             # --- its domains ---
             lambda _: _.dialect.domains({

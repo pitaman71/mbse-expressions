@@ -252,9 +252,9 @@ def define(txn: Any) -> Any:
             lambda _: _.dialect.standards({f"TypeScript 5.{minor}": lambda e, v=version: e.standard(getattr(_, v))
                                            for minor, version in enumerate(versions)}),
             *[lambda _, minor=minor, version=version: getattr(_, version).bodies(["com.microsoft"]).revision(
-                lambda r: r.version(f"5.{minor}")).kinds(every) for minor, version in enumerate(versions)],
-            # --- each standard's oldest edition flagged `before`, its newest `after` ---
-            *FS.editions_spec([versions]),
+                lambda r: r.version(f"5.{minor}")) for minor, version in enumerate(versions)],
+            # --- the kinds each edition has, each entry flagged by what is true beyond it ---
+            *FS.editions_spec([versions], dict.fromkeys(versions, every)),
             *specs,
         ])]))])
 

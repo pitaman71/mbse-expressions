@@ -15,18 +15,17 @@ The reading interface, over a dialect's or an edition's `Readers.OfObject`, foun
 - `tags(standard)`: its designation, then its common names: the references it is found by.
 - `find(dialect, tag)`: the edition a dialect covers whose designation or common name is `tag`, or None.
 - `properties(standard)`: its formal reference's parts and its common names that are set, by name: a container as a
-  tuple, its `revision` as its branch and its value (`("year", 2011)`); not its flags.
+  tuple, its `revision` as its branch and its value (`("year", 2011)`).
 - `kinds(standard)`: the schemas of the kinds it has, in the order the store holds the entries; `of(dialect, kind)`:
   the editions a dialect covers that have a kind, given its schema, by designation. A kind's schema reads the same
-  entries from its side, through its extension adjacency `standards`. Each standard's oldest edition a dialect
-  covers is flagged `before`, and its newest `after`, as the user decided for a kind's membership as for a grammar
-  clause's `Allows` and `Forbids` (mbse-basis [grammar clauses by
-  version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "Decided in stage 3": "1. I already confirmed that"). They
-  belong on `HasStandard`, as decided; they are on the edition for now, a workaround and not a decision, until
-  mbse-schemas allows properties on a relation an extension adjacency reads (its CAP-116, to be revised there).
+  entries from its side, through its extension adjacency `standards`. Each `HasStandard` entry has the optional
+  flags `before` and `after`, as a grammar clause's `Allows` and `Forbids` entries have them, as the user decided
+  (mbse-basis [grammar clauses by version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "Decided in stage 3", 1
+  (b)): an entry of a standard's oldest edition a dialect covers is flagged `before`, and one of its newest `after`,
+  extending the kind's membership to the editions before or after it that the data does not represent.
 - `edition_has(dialect, designation, revision, kind)`: whether an edition given by its designation and its revision
   has a kind, whether the dialect covers it or not: one it does not cover is guessed from its neighbours' flagged
-  entries.
+  `HasStandard` entries of the kind.
 
 What changes from one edition to the next within a kind is data too: a grammar clause, an alternative within a
 production of the dialect's grammar, a language feature (mbse-basis [grammar clauses by
@@ -67,7 +66,8 @@ A dialect's `define` writes its grammar clauses from a table, each a `GrammarCla
 `requires`, and, where it records what an edition before the data removed, by `removed`: `grammar_clauses_spec(txn,
 dialect, clauses, schemas, editions)` gives the symbols and the specs that write them in its frame, beside its
 editions, its dialect bound by the symbol `dialect`, each entry flagged by what is true beyond it; and
-`editions_spec(editions)` the specs flagging each standard's oldest and newest editions.
+`editions_spec(editions, kinds)` the specs writing the kinds each edition has, each entry flagged by what is true
+beyond it.
 """
 
 from __future__ import annotations
@@ -119,13 +119,12 @@ def find(dialect: Readers.OfObject, tag: str) -> Readers.OfObject | None:
 
 def properties(standard: Readers.OfObject) -> dict[str, object]:
     """A stored edition's properties that are set, by name, in its schema's order: its `bodies` and `names` as tuples,
-    its `number` as itself, and its `revision` as its branch and its value (`("year", 2011)`); not its flags, `before`
-    and `after`, which are no part of its reference."""
+    its `number` as itself, and its `revision` as its branch and its value (`("year", 2011)`)."""
     found = Objects.properties(standard)
     revision = found.get("revision")
     return {name: tuple(value.values) if isinstance(value, Objects.Listed)
             else next(iter(Objects.properties(revision).items())) if name == "revision" else value
-            for name, value in found.items() if name not in ("before", "after")}
+            for name, value in found.items()}
 
 
 def kinds(standard: Readers.OfObject) -> list[Any]:
@@ -347,15 +346,15 @@ def edition_has(dialect: Readers.OfObject, designation: str, revision: tuple[str
     """Whether an edition, given by its designation and its revision, has a kind, given its schema, whether its
     dialect covers it or not: by its own `Expressions.Framework.HasStandard` entries, where the dialect covers it by
     that designation; where it covers none, the data not representing it, where a neighbour has it, the nearest edition
-    of its standard (`_placed`) before it that has it, flagged `after`, or the nearest after it, flagged `before`
-    *(agent)*; otherwise not."""
+    of its standard (`_placed`) before it that has it, its entry flagged `after`, or the nearest after it, its entry
+    flagged `before` *(agent)*; otherwise not."""
     stored = standards(dialect).get(designation)
     if stored is not None:
         return any(held is kind for held in kinds(stored))
     order = _placed(dialect, designation, revision)
     return order is not None and bool(_guesses(
-        [(_order(standard), True, Objects.properties(standard)) for standard in standards(dialect).values()
-         if any(held is kind for held in kinds(standard))], order))
+        [(_order(standard), True, entry.values) for standard in standards(dialect).values()
+         for entry in Objects.entries(standard, "kinds") if entry.targets["kind"] is kind], order))
 
 
 # --- Writing a dialect's grammar clauses ---
@@ -428,13 +427,28 @@ def requires(clause: GrammarClause, names: tuple[str, ...]) -> GrammarClause:
     return clause._replace(requires=names)
 
 
-def editions_spec(editions: Sequence[Sequence[str]]) -> list[Callable[[Any], Any]]:
-    """The specs a dialect's `define` flags its editions with, given them by their symbols in its frame, grouped by
-    standard, each standard's oldest first (C's then C++'s): each standard's oldest edition `before` and its newest
-    `after`, as `grammar_clauses_spec` flags the entries of grammar clauses, so that an edition the data does not
-    represent is guessed to have the kinds its nearest neighbour has (`edition_has`)."""
-    return [lambda _, edition=standard[index], flag=flag: getattr(getattr(_, edition), flag)(True)
-            for standard in editions for index, flag in ((0, "before"), (-1, "after"))]
+def _flagged(editions: Sequence[Sequence[str]]) -> dict[str, list[str]]:
+    """Each edition, by its symbol, in the order given, and the flags its entries have, what is true beyond it: each
+    standard's oldest edition's `before`, its newest's `after`."""
+    return {edition: [flag for flag, on in (("before", index == 0), ("after", index == len(standard) - 1)) if on]
+            for standard in editions for index, edition in enumerate(standard)}
+
+
+def editions_spec(editions: Sequence[Sequence[str]], kinds: Mapping[str, Sequence[Any]]) -> list[Callable[[Any], Any]]:
+    """The specs a dialect's `define` writes the kinds of its editions with (`Expressions.Framework.HasStandard`),
+    given its editions by their symbols in its frame, grouped by standard, each standard's oldest first (C's then
+    C++'s), and the schemas of the kinds each has, by its symbol: each entry flagged by what is true beyond it, as
+    `grammar_clauses_spec` flags the entries of grammar clauses, an entry of each standard's oldest edition `before`
+    and one of its newest `after`, so that an edition the data does not represent is guessed to have the kinds its
+    nearest neighbours have (`edition_has`). A kind its oldest edition lacks has no entry there, so none flagged
+    `before`."""
+    def entry(kind: Any, flags: Sequence[str]) -> Any:
+        if not flags:
+            return kind
+        return lambda t: [getattr(t.kind(kind), flag)(True) for flag in flags]
+
+    return [lambda _, edition=edition, flags=flags: getattr(_, edition).kinds(
+        [entry(kind, flags) for kind in kinds[edition]]) for edition, flags in _flagged(editions).items()]
 
 
 def removed(clause: GrammarClause) -> GrammarClause:
@@ -457,12 +471,11 @@ def grammar_clauses_spec(txn: Any, dialect: str, clauses: Sequence[GrammarClause
     neighbour."""
     symbol = {clause.name: f"grammar_clause_{index}" for index, clause in enumerate(clauses)}
     GC = txn.Expressions.Framework.GrammarClause
-    flagged = {edition: {"before": index == 0, "after": index == len(standard) - 1}
-               for standard in editions for index, edition in enumerate(standard)}
+    flagged = _flagged(editions)
 
     def entry(_: Any, edition: str, clause: GrammarClause) -> Any:
         standard = getattr(_, edition)
-        flags = [flag for flag, on in flagged[edition].items() if on and not (flag == "before" and clause.removed)]
+        flags = [flag for flag in flagged[edition] if not (flag == "before" and clause.removed)]
         if not flags:
             return standard
         return lambda t: [getattr(t.standard(standard), flag)(True) for flag in flags]

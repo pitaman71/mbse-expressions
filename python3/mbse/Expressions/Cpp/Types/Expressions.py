@@ -121,13 +121,13 @@ def define(txn: Any) -> Any:
                 "ISO/IEC 14882:2020": lambda e: e.standard(_.Cpp20),
                 "ISO/IEC 14882:2024": lambda e: e.standard(_.Cpp23)}),
             lambda _: _.Cpp17.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2017)).names(
-                ["C++17"]).kinds(every),
+                ["C++17"]),
             lambda _: _.Cpp20.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2020)).names(
-                ["C++20"]).kinds(every),
+                ["C++20"]),
             lambda _: _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2024)).names(
-                ["C++23"]).kinds(every),
-            # --- each standard's oldest edition flagged `before`, its newest `after` ---
-            *FS.editions_spec([K.CPP_EDITIONS]),
+                ["C++23"]),
+            # --- the kinds each edition has, each entry flagged by what is true beyond it ---
+            *FS.editions_spec([K.CPP_EDITIONS], dict.fromkeys(K.CPP_EDITIONS, every)),
         ])]))])
 
 

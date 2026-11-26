@@ -219,10 +219,11 @@ def define(txn: Any) -> Any:
     OWN, Standard = txn.Expressions.TypeScript.RegExp, txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS}
 
-    def edition(index: int, revision: tuple[str, Any], names: tuple[str, ...]) -> Any:
-        kinds = [schema for tag, schema in every.items() if SYMBOLS[index] in ONLY.get(tag, SYMBOLS)]
+    kinds = {symbol: [schema for tag, schema in every.items() if symbol in ONLY.get(tag, SYMBOLS)] for symbol in SYMBOLS}
+
+    def edition(revision: tuple[str, Any], names: tuple[str, ...]) -> Any:
         return lambda e: e.bodies(["org.ecma-international"]).number("262").revision(
-            lambda r: getattr(r, revision[0])(revision[1])).names(list(names)).kinds(kinds)
+            lambda r: getattr(r, revision[0])(revision[1])).names(list(names))
 
     schemas = {**every, "flags": OWN.Flags.as_schema()}
     clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES, schemas, [SYMBOLS])
@@ -231,10 +232,10 @@ def define(txn: Any) -> Any:
         .spec([
             lambda _: _.dialect.standards({designation: lambda e, symbol=symbol: e.standard(getattr(_, symbol))
                                            for designation, *_rest, symbol in EDITIONS}),
-            *[lambda _, i=i, revision=revision, names=names, symbol=symbol: edition(i, revision, names)(getattr(_, symbol))
-              for i, (_designation, revision, names, symbol) in enumerate(EDITIONS)],
-            # --- each standard's oldest edition flagged `before`, its newest `after` ---
-            *FS.editions_spec([SYMBOLS]),
+            *[lambda _, revision=revision, names=names, symbol=symbol: edition(revision, names)(getattr(_, symbol))
+              for _designation, revision, names, symbol in EDITIONS],
+            # --- the kinds each edition has, each entry flagged by what is true beyond it ---
+            *FS.editions_spec([SYMBOLS], kinds),
             *specs,
         ])]))])
 

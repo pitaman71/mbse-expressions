@@ -378,20 +378,21 @@ def define(txn: Any) -> Any:
                   "Float16": Domain, "Float32": Domain, "Float64": Domain, "Float128": Domain,
                   "Decimal32": Domain, "Decimal64": Domain, "Decimal128": Domain, "nullptr_t": Domain, **clauses})
         .spec([
-            # --- the editions C covers, each by its designation, with the kinds it has: every kind but GNU's
-            # extensions and invalid syntax, `constant` (`nullptr`) C23's alone; C17 is C11's corrigenda ---
+            # --- the editions C covers, each by its designation; C17 is C11's corrigenda ---
             lambda _: _.dialect.standards({
                 "ISO/IEC 9899:2011": lambda e: e.standard(_.C11), "ISO/IEC 9899:2018": lambda e: e.standard(_.C17),
                 "ISO/IEC 9899:2024": lambda e: e.standard(_.C23)}),
             lambda _: _.C11.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2011)).names(
-                ["C11"]).kinds(                [schema for tag, schema in every.items() if tag != CONSTANT]),
+                ["C11"]),
             lambda _: _.C17.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2018)).names(
-                ["C17"]).kinds(                [schema for tag, schema in every.items() if tag != CONSTANT]),
+                ["C17"]),
             lambda _: _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2024)).names(
-                ["C23"]).kinds(                list(every.values())),
+                ["C23"]),
             # --- its grammar clauses, each allowed or forbidden by each edition ---
-            # --- each standard's oldest edition flagged `before`, its newest `after` ---
-            *FS.editions_spec([K.C_EDITIONS]),
+            # --- the kinds each edition has, each entry flagged by what is true beyond it ---
+            # (every kind but GNU's extensions and invalid syntax, `constant` (`nullptr`) C23's alone)
+            *FS.editions_spec([K.C_EDITIONS], {edition: [schema for tag, schema in every.items()
+                                                        if tag != CONSTANT or edition == "C23"] for edition in K.C_EDITIONS}),
             *specs,
             # --- its domains ---
             lambda _: _.dialect.domains({

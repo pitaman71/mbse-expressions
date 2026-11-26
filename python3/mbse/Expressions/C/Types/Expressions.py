@@ -279,13 +279,13 @@ def define(txn: Any) -> Any:
                 "ISO/IEC 9899:2011": lambda e: e.standard(_.C11), "ISO/IEC 9899:2018": lambda e: e.standard(_.C17),
                 "ISO/IEC 9899:2024": lambda e: e.standard(_.C23)}),
             lambda _: _.C11.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2011)).names(
-                ["C11"]).kinds(every),
+                ["C11"]),
             lambda _: _.C17.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2018)).names(
-                ["C17"]).kinds(every),
+                ["C17"]),
             lambda _: _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2024)).names(
-                ["C23"]).kinds(every),
-            # --- each standard's oldest edition flagged `before`, its newest `after` ---
-            *FS.editions_spec([K.C_EDITIONS]),
+                ["C23"]),
+            # --- the kinds each edition has, each entry flagged by what is true beyond it ---
+            *FS.editions_spec([K.C_EDITIONS], dict.fromkeys(K.C_EDITIONS, every)),
             *specs,
         ])]))])
 

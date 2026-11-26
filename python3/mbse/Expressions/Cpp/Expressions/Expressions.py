@@ -627,21 +627,21 @@ def define(txn: Any) -> Any:
                   "std_float16_t": Domain, "std_float32_t": Domain, "std_float64_t": Domain, "std_float128_t": Domain,
                   "std_bfloat16_t": Domain, "nullptr_t": Domain, **clauses})
         .spec([
-            # --- the editions C++ covers, each by its designation, with the kinds it has: every kind but GNU's
-            # extensions and invalid syntax, C++20's own in C++20 and C++23 alone ---
+            # --- the editions C++ covers, each by its designation ---
             lambda _: _.dialect.standards({
                 "ISO/IEC 14882:2017": lambda e: e.standard(_.Cpp17),
                 "ISO/IEC 14882:2020": lambda e: e.standard(_.Cpp20),
                 "ISO/IEC 14882:2024": lambda e: e.standard(_.Cpp23)}),
             lambda _: _.Cpp17.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2017)).names(
-                ["C++17"]).kinds(has("Cpp17")),
+                ["C++17"]),
             lambda _: _.Cpp20.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2020)).names(
-                ["C++20"]).kinds(has("Cpp20")),
+                ["C++20"]),
             lambda _: _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2024)).names(
-                ["C++23"]).kinds(has("Cpp23")),
+                ["C++23"]),
             # --- its grammar clauses, each allowed or forbidden by each edition ---
-            # --- each standard's oldest edition flagged `before`, its newest `after` ---
-            *FS.editions_spec([C.CPP_EDITIONS]),
+            # --- the kinds each edition has, each entry flagged by what is true beyond it ---
+            # (every kind but GNU's extensions and invalid syntax, C++20's own in C++20 and C++23 alone)
+            *FS.editions_spec([C.CPP_EDITIONS], {edition: has(edition) for edition in C.CPP_EDITIONS}),
             *specs,
             # --- its domains ---
             lambda _: _.dialect.domains({
