@@ -105,18 +105,6 @@
                     }
                   },
                   {
-                    "as_property": {
-                      "name": "after",
-                      "mutations": [
-                        {
-                          "set": {
-                            "value": true
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
                     "as_adjacency": {
                       "name": "dialect",
                       "mutations": [
@@ -227,6 +215,18 @@
                                         }
                                       ]
                                     }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
+                                          }
+                                        }
+                                      ]
+                                    }
                                   }
                                 ]
                               },
@@ -282,6 +282,18 @@
                                                 }
                                               }
                                             }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
                                           }
                                         }
                                       ]
@@ -345,6 +357,18 @@
                                         }
                                       ]
                                     }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
+                                          }
+                                        }
+                                      ]
+                                    }
                                   }
                                 ]
                               },
@@ -391,6 +415,18 @@
                                                 }
                                               }
                                             }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
                                           }
                                         }
                                       ]
@@ -454,6 +490,18 @@
                                         }
                                       ]
                                     }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
+                                          }
+                                        }
+                                      ]
+                                    }
                                   }
                                 ]
                               },
@@ -509,6 +557,18 @@
                                                 }
                                               }
                                             }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
                                           }
                                         }
                                       ]
@@ -572,6 +632,18 @@
                                         }
                                       ]
                                     }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
+                                          }
+                                        }
+                                      ]
+                                    }
                                   }
                                 ]
                               },
@@ -627,6 +699,18 @@
                                                 }
                                               }
                                             }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
                                           }
                                         }
                                       ]
@@ -690,6 +774,18 @@
                                         }
                                       ]
                                     }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
+                                          }
+                                        }
+                                      ]
+                                    }
                                   }
                                 ]
                               },
@@ -745,6 +841,18 @@
                                                 }
                                               }
                                             }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
                                           }
                                         }
                                       ]
@@ -808,6 +916,18 @@
                                         }
                                       ]
                                     }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
+                                          }
+                                        }
+                                      ]
+                                    }
                                   }
                                 ]
                               },
@@ -863,6 +983,18 @@
                                                 }
                                               }
                                             }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
                                           }
                                         }
                                       ]
@@ -926,6 +1058,18 @@
                                         }
                                       ]
                                     }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
+                                          }
+                                        }
+                                      ]
+                                    }
                                   }
                                 ]
                               },
@@ -981,6 +1125,18 @@
                                                 }
                                               }
                                             }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
                                           }
                                         }
                                       ]
@@ -1044,6 +1200,18 @@
                                         }
                                       ]
                                     }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
+                                          }
+                                        }
+                                      ]
+                                    }
                                   }
                                 ]
                               },
@@ -1099,6 +1267,18 @@
                                                 }
                                               }
                                             }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
                                           }
                                         }
                                       ]
@@ -1162,6 +1342,18 @@
                                         }
                                       ]
                                     }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
+                                          }
+                                        }
+                                      ]
+                                    }
                                   }
                                 ]
                               },
@@ -1217,6 +1409,18 @@
                                                 }
                                               }
                                             }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
                                           }
                                         }
                                       ]
@@ -1280,6 +1484,18 @@
                                         }
                                       ]
                                     }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
+                                          }
+                                        }
+                                      ]
+                                    }
                                   }
                                 ]
                               },
@@ -1335,6 +1551,18 @@
                                                 }
                                               }
                                             }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "after",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": true
                                           }
                                         }
                                       ]
