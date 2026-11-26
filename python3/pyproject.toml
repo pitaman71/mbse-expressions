@@ -9,10 +9,10 @@ description = "Constraints as language-neutral data: validated, evaluated, store
 keywords = ["expressions", "constraints", "predicates", "mbse", "sysml", "interface", "translation", "excel", "matlab"]
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["mbse-schemas>=0.35.0,<1.0"]
+dependencies = ["mbse-schemas>=0.37.0,<1.0"]
 
 [project.optional-dependencies]
-yaml = ["mbse-schemas[yaml]>=0.35.0,<1.0"]
+yaml = ["mbse-schemas[yaml]>=0.37.0,<1.0"]
 numpy = ["numpy>=2.4.6"]
 
 [tool.setuptools.package-data]
