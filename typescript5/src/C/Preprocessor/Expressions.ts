@@ -284,19 +284,20 @@ export function define(txn: any): any {
         "ISO/IEC 14882:2020": (e: any) => e.standard(_.Cpp20),
         "ISO/IEC 14882:2024": (e: any) => e.standard(_.Cpp23) }),
       (_: any) => _.C11.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2011n)).names(
-        ["C11"]).kinds(kinds("C11")),
+        ["C11"]),
       (_: any) => _.C17.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2018n)).names(
-        ["C17"]).kinds(kinds("C17")),
+        ["C17"]),
       (_: any) => _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2024n)).names(
-        ["C23"]).kinds(kinds("C23")),
+        ["C23"]),
       (_: any) => _.Cpp17.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2017n)).names(
-        ["C++17"]).kinds(kinds("Cpp17")),
+        ["C++17"]),
       (_: any) => _.Cpp20.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2020n)).names(
-        ["C++20"]).kinds(kinds("Cpp20")),
+        ["C++20"]),
       (_: any) => _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2024n)).names(
-        ["C++23"]).kinds(kinds("Cpp23")),
-      // --- each standard's oldest edition flagged `before`, its newest `after` ---
-      ...FS.editionsSpec([K.C_EDITIONS, K.CPP_EDITIONS]),
+        ["C++23"]),
+      // --- the kinds each edition has, each entry flagged by what is true beyond it ---
+      ...FS.editionsSpec([K.C_EDITIONS, K.CPP_EDITIONS],
+        new Map([...K.C_EDITIONS, ...K.CPP_EDITIONS].map((edition) => [edition, kinds(edition)]))),
       ...specs,
     ])]))]);
 }

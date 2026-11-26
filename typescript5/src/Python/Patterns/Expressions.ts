@@ -153,16 +153,17 @@ export function define(txn: any): any {
   const [OWN, Standard] = [txn.Expressions.Python.Patterns, txn.Expressions.Framework.Standard];
   const every = (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).filter((b) => TAGS.includes(b.name));
   const minors = Array.from({ length: 6 }, (_, i) => 10 + i);
+  const symbols = minors.map((minor) => `Python_3_${minor}`);
   const version = (minor: number) => (_: any) => _[`Python_3_${minor}`].bodies(["org.python"]).revision(
-    (r: any) => r.version(`3.${minor}`)).kinds(every.map((b) => b.schema));
+    (r: any) => r.version(`3.${minor}`));
   return txn.uid("mbse.Expressions.Python.Patterns.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(minors.map((minor) => [`Python_3_${minor}`, Standard])) })
     .spec([
       (_: any) => _.dialect.standards(Object.fromEntries(minors.map((minor) => [`Python 3.${minor}`,
         (e: any) => e.standard(_[`Python_3_${minor}`])]))),
       ...minors.map(version),
-      // --- each standard's oldest edition flagged `before`, its newest `after` ---
-      ...FS.editionsSpec([minors.map((minor) => `Python_3_${minor}`)]),
+      // --- the kinds each edition has, each entry flagged by what is true beyond it ---
+      ...FS.editionsSpec([symbols], new Map(symbols.map((symbol) => [symbol, every.map((b) => b.schema)]))),
     ])]))]);
 }
 

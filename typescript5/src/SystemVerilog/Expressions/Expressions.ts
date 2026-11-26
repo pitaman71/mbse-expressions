@@ -496,21 +496,21 @@ export function define(txn: any): any {
         "IEEE Std 1800-2017": (e: any) => e.standard(_.SystemVerilog_2017),
         "IEEE Std 1800-2023": (e: any) => e.standard(_.SystemVerilog_2023) }),
       (_: any) => _.Verilog_1995.bodies(["org.ieee"]).number("1364").revision((r: any) => r.year(1995n)).names(
-        ["Verilog-1995"]).kinds(kinds[0]),
+        ["Verilog-1995"]),
       (_: any) => _.Verilog_2001.bodies(["org.ieee"]).number("1364").revision((r: any) => r.year(2001n)).names(
-        ["Verilog-2001"]).kinds(kinds[1]),
+        ["Verilog-2001"]),
       (_: any) => _.Verilog_2005.bodies(["org.ieee"]).number("1364").revision((r: any) => r.year(2005n)).names(
-        ["Verilog-2005"]).kinds(kinds[2]),
+        ["Verilog-2005"]),
       (_: any) => _.SystemVerilog_2005.bodies(["org.ieee"]).number("1800").revision((r: any) => r.year(2005n)).names(
-        ["SystemVerilog-2005"]).kinds(kinds[3]),
+        ["SystemVerilog-2005"]),
       (_: any) => _.SystemVerilog_2009.bodies(["org.ieee"]).number("1800").revision((r: any) => r.year(2009n)).names(
-        ["SystemVerilog-2009"]).kinds(kinds[4]),
+        ["SystemVerilog-2009"]),
       (_: any) => _.SystemVerilog_2012.bodies(["org.ieee"]).number("1800").revision((r: any) => r.year(2012n)).names(
-        ["SystemVerilog-2012"]).kinds(kinds[5]),
+        ["SystemVerilog-2012"]),
       (_: any) => _.SystemVerilog_2017.bodies(["org.ieee"]).number("1800").revision((r: any) => r.year(2017n)).names(
-        ["SystemVerilog-2017"]).kinds(kinds[6]),
+        ["SystemVerilog-2017"]),
       (_: any) => _.SystemVerilog_2023.bodies(["org.ieee"]).number("1800").revision((r: any) => r.year(2023n)).names(
-        ["SystemVerilog-2023"]).kinds(kinds[7]),
+        ["SystemVerilog-2023"]),
       // --- its domains ---
       (_: any) => _.dialect.domains({
         logic: (e: any) => e.domain(_.logic), reg: (e: any) => e.domain(_.reg),
@@ -548,8 +548,9 @@ export function define(txn: any): any {
       (_: any) => _.shortreal.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754((v: any) => v.ieee754(
         (d: any) => d.format("binary32").rounding("roundTiesToEven").width(32n).radix(2n).precision(24n).emax(127n).ordered(
           true)))))).schema([SV.shortreal]),
-      // --- each standard's oldest edition flagged `before`, its newest `after` ---
-      ...FS.editionsSpec([SYMBOLS.slice(0, 3), SYMBOLS.slice(3)]),
+      // --- the kinds each edition has, each entry flagged by what is true beyond it ---
+      ...FS.editionsSpec([SYMBOLS.slice(0, 3), SYMBOLS.slice(3)],
+        new Map(SYMBOLS.map((symbol, index) => [symbol, kinds[index]!]))),
     ])]))]);
 }
 

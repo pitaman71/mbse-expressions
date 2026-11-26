@@ -424,7 +424,7 @@ export function define(txn: any): any {
     .symbols({ dialect: Python3.Dialect, ...versions, bool: Domain, int: Domain, float: Domain, str: Domain,
       bytes: Domain, NoneType: Domain, ellipsis: Domain, ...clauses })
     .spec([
-      // --- the versions of Python 3 it covers, each by its published name, with the kinds it has ---
+      // --- the versions of Python 3 it covers, each by its published name ---
       (_: any) => _.dialect.standards({
         "Python 3.0": (e: any) => e.standard(_.Python_3_0), "Python 3.1": (e: any) => e.standard(_.Python_3_1),
         "Python 3.2": (e: any) => e.standard(_.Python_3_2), "Python 3.3": (e: any) => e.standard(_.Python_3_3),
@@ -435,25 +435,25 @@ export function define(txn: any): any {
         "Python 3.12": (e: any) => e.standard(_.Python_3_12), "Python 3.13": (e: any) => e.standard(_.Python_3_13),
         "Python 3.14": (e: any) => e.standard(_.Python_3_14), "Python 3.15": (e: any) => e.standard(_.Python_3_15),
       }),
-      (_: any) => _.Python_3_0.bodies(PSF).revision((r: any) => r.version("3.0")).kinds(has(0)),
-      (_: any) => _.Python_3_1.bodies(PSF).revision((r: any) => r.version("3.1")).kinds(has(1)),
-      (_: any) => _.Python_3_2.bodies(PSF).revision((r: any) => r.version("3.2")).kinds(has(2)),
-      (_: any) => _.Python_3_3.bodies(PSF).revision((r: any) => r.version("3.3")).kinds(has(3)),
-      (_: any) => _.Python_3_4.bodies(PSF).revision((r: any) => r.version("3.4")).kinds(has(4)),
-      (_: any) => _.Python_3_5.bodies(PSF).revision((r: any) => r.version("3.5")).kinds(has(5)),
-      (_: any) => _.Python_3_6.bodies(PSF).revision((r: any) => r.version("3.6")).kinds(has(6)),
-      (_: any) => _.Python_3_7.bodies(PSF).revision((r: any) => r.version("3.7")).kinds(has(7)),
-      (_: any) => _.Python_3_8.bodies(PSF).revision((r: any) => r.version("3.8")).kinds(has(8)),
-      (_: any) => _.Python_3_9.bodies(PSF).revision((r: any) => r.version("3.9")).kinds(has(9)),
-      (_: any) => _.Python_3_10.bodies(PSF).revision((r: any) => r.version("3.10")).kinds(has(10)),
-      (_: any) => _.Python_3_11.bodies(PSF).revision((r: any) => r.version("3.11")).kinds(has(11)),
-      (_: any) => _.Python_3_12.bodies(PSF).revision((r: any) => r.version("3.12")).kinds(has(12)),
-      (_: any) => _.Python_3_13.bodies(PSF).revision((r: any) => r.version("3.13")).kinds(has(13)),
-      (_: any) => _.Python_3_14.bodies(PSF).revision((r: any) => r.version("3.14")).kinds(has(14)),
-      (_: any) => _.Python_3_15.bodies(PSF).revision((r: any) => r.version("3.15")).kinds(has(15)),
+      (_: any) => _.Python_3_0.bodies(PSF).revision((r: any) => r.version("3.0")),
+      (_: any) => _.Python_3_1.bodies(PSF).revision((r: any) => r.version("3.1")),
+      (_: any) => _.Python_3_2.bodies(PSF).revision((r: any) => r.version("3.2")),
+      (_: any) => _.Python_3_3.bodies(PSF).revision((r: any) => r.version("3.3")),
+      (_: any) => _.Python_3_4.bodies(PSF).revision((r: any) => r.version("3.4")),
+      (_: any) => _.Python_3_5.bodies(PSF).revision((r: any) => r.version("3.5")),
+      (_: any) => _.Python_3_6.bodies(PSF).revision((r: any) => r.version("3.6")),
+      (_: any) => _.Python_3_7.bodies(PSF).revision((r: any) => r.version("3.7")),
+      (_: any) => _.Python_3_8.bodies(PSF).revision((r: any) => r.version("3.8")),
+      (_: any) => _.Python_3_9.bodies(PSF).revision((r: any) => r.version("3.9")),
+      (_: any) => _.Python_3_10.bodies(PSF).revision((r: any) => r.version("3.10")),
+      (_: any) => _.Python_3_11.bodies(PSF).revision((r: any) => r.version("3.11")),
+      (_: any) => _.Python_3_12.bodies(PSF).revision((r: any) => r.version("3.12")),
+      (_: any) => _.Python_3_13.bodies(PSF).revision((r: any) => r.version("3.13")),
+      (_: any) => _.Python_3_14.bodies(PSF).revision((r: any) => r.version("3.14")),
+      (_: any) => _.Python_3_15.bodies(PSF).revision((r: any) => r.version("3.15")),
       // --- its grammar clauses, each allowed or forbidden by each version ---
-      // --- each standard's oldest edition flagged `before`, its newest `after` ---
-      ...FS.editionsSpec([VERSIONS]),
+      // --- the kinds each edition has, each entry flagged by what is true beyond it ---
+      ...FS.editionsSpec([VERSIONS], new Map(VERSIONS.map((version, minor) => [version, has(minor)]))),
       ...specs,
       // --- its domains ---
       (_: any) => _.dialect.domains({

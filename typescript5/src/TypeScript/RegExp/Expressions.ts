@@ -237,9 +237,10 @@ export function define(txn: any): any {
   const OWN = txn.Expressions.TypeScript.RegExp;
   const Standard = txn.Expressions.Framework.Standard;
   const every = (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).filter((b) => TAGS.includes(b.name));
-  const edition = (index: number, [revision, value]: Edition[1], names: readonly string[]) => (e: any) => e
-    .bodies(["org.ecma-international"]).number("262").revision((r: any) => r[revision](value)).names([...names])
-    .kinds(every.filter((b) => (ONLY.get(b.name) ?? SYMBOLS).includes(SYMBOLS[index]!)).map((b) => b.schema));
+  const kinds = new Map(SYMBOLS.map((symbol) => [symbol,
+    every.filter((b) => (ONLY.get(b.name) ?? SYMBOLS).includes(symbol)).map((b) => b.schema)]));
+  const edition = ([revision, value]: Edition[1], names: readonly string[]) => (e: any) => e
+    .bodies(["org.ecma-international"]).number("262").revision((r: any) => r[revision](value)).names([...names]);
   const [clauses, specs] = FS.grammarClausesSpec(txn, "dialect", GRAMMAR_CLAUSES, new Map<string, unknown>([
     ...every.map((b) => [b.name, b.schema] as [string, unknown]), ["flags", OWN.Flags.as_schema()]]), [SYMBOLS]);
   return txn.uid("mbse.Expressions.TypeScript.RegExp.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
@@ -247,9 +248,9 @@ export function define(txn: any): any {
     .spec([
       (_: any) => _.dialect.standards(Object.fromEntries(EDITIONS.map(([designation, , , symbol]) => [
         designation, (e: any) => e.standard(_[symbol])]))),
-      ...EDITIONS.map(([, revision, names, symbol], i) => (_: any) => edition(i, revision, names)(_[symbol])),
-      // --- each standard's oldest edition flagged `before`, its newest `after` ---
-      ...FS.editionsSpec([SYMBOLS]),
+      ...EDITIONS.map(([, revision, names, symbol]) => (_: any) => edition(revision, names)(_[symbol])),
+      // --- the kinds each edition has, each entry flagged by what is true beyond it ---
+      ...FS.editionsSpec([SYMBOLS], kinds),
       ...specs,
     ])]))]);
 }

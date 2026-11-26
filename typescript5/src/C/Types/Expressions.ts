@@ -285,13 +285,13 @@ export function define(txn: any): any {
         "ISO/IEC 9899:2011": (e: any) => e.standard(_.C11), "ISO/IEC 9899:2018": (e: any) => e.standard(_.C17),
         "ISO/IEC 9899:2024": (e: any) => e.standard(_.C23) }),
       (_: any) => _.C11.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2011n)).names(
-        ["C11"]).kinds(every),
+        ["C11"]),
       (_: any) => _.C17.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2018n)).names(
-        ["C17"]).kinds(every),
+        ["C17"]),
       (_: any) => _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2024n)).names(
-        ["C23"]).kinds(every),
-      // --- each standard's oldest edition flagged `before`, its newest `after` ---
-      ...FS.editionsSpec([K.C_EDITIONS]),
+        ["C23"]),
+      // --- the kinds each edition has, each entry flagged by what is true beyond it ---
+      ...FS.editionsSpec([K.C_EDITIONS], new Map(K.C_EDITIONS.map((edition) => [edition, every]))),
       ...specs,
     ])]))]);
 }

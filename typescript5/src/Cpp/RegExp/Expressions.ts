@@ -229,13 +229,13 @@ export function define(txn: any): any {
         "ISO/IEC 14882:2020": (e: any) => e.standard(_.Cpp20),
         "ISO/IEC 14882:2024": (e: any) => e.standard(_.Cpp23) }),
       (_: any) => _.Cpp17.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2017n)).names(
-        ["C++17"]).kinds(every),
+        ["C++17"]),
       (_: any) => _.Cpp20.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2020n)).names(
-        ["C++20"]).kinds(every),
+        ["C++20"]),
       (_: any) => _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2024n)).names(
-        ["C++23"]).kinds(every),
-      // --- each standard's oldest edition flagged `before`, its newest `after` ---
-      ...FS.editionsSpec([["Cpp17", "Cpp20", "Cpp23"]]),
+        ["C++23"]),
+      // --- the kinds each edition has, each entry flagged by what is true beyond it ---
+      ...FS.editionsSpec([["Cpp17", "Cpp20", "Cpp23"]], new Map(["Cpp17", "Cpp20", "Cpp23"].map((edition) => [edition, every]))),
     ])]))]);
 }
 
