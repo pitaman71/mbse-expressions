@@ -383,23 +383,21 @@ export function define(txn: any): any {
       Decimal32: Domain, Decimal64: Domain, Decimal128: Domain, nullptr_t: Domain, ...clauses,
     })
     .spec([
-      // --- the editions C covers, each by its designation, with the kinds it has: every kind but GNU's extensions and
-      // invalid syntax, `constant` (`nullptr`) C23's alone; C17 is C11's corrigenda ---
+      // --- the editions C covers, each by its designation; C17 is C11's corrigenda ---
       (_: any) => _.dialect.standards({
         "ISO/IEC 9899:2011": (e: any) => e.standard(_.C11), "ISO/IEC 9899:2018": (e: any) => e.standard(_.C17),
         "ISO/IEC 9899:2024": (e: any) => e.standard(_.C23) }),
       (_: any) => _.C11.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2011n)).names(
-        ["C11"]).kinds(
-        [...every].filter(([tag]) => tag !== CONSTANT).map(([, schema]) => schema)),
+        ["C11"]),
       (_: any) => _.C17.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2018n)).names(
-        ["C17"]).kinds(
-        [...every].filter(([tag]) => tag !== CONSTANT).map(([, schema]) => schema)),
+        ["C17"]),
       (_: any) => _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2024n)).names(
-        ["C23"]).kinds(
-        [...every.values()]),
+        ["C23"]),
       // --- its grammar clauses, each allowed or forbidden by each edition ---
-      // --- each standard's oldest edition flagged `before`, its newest `after` ---
-      ...FS.editionsSpec([C_EDITIONS]),
+      // --- the kinds each edition has, each entry flagged by what is true beyond it ---
+      // (every kind but GNU's extensions and invalid syntax, `constant` (`nullptr`) C23's alone)
+      ...FS.editionsSpec([C_EDITIONS], new Map(C_EDITIONS.map((edition) => [edition,
+        [...every].filter(([tag]) => tag !== CONSTANT || edition === "C23").map(([, schema]) => schema)]))),
       ...specs,
       // --- its domains ---
       (_: any) => _.dialect.domains({

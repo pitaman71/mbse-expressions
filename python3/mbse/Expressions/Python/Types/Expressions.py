@@ -117,10 +117,11 @@ def define(txn: Any) -> Any:
     minors = range(16)
     clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES, every, [_family.VERSIONS])
 
+    kinds = {symbol: [schema for tag, schema in every.items() if symbol in ONLY[tag]] for symbol in _family.VERSIONS}
+
     def version(minor: int) -> Callable[[Any], Any]:
-        kinds = [schema for tag, schema in every.items() if _family.VERSIONS[minor] in ONLY[tag]]
         return lambda _: getattr(_, f"Python_3_{minor}").bodies(["org.python"]).revision(
-            lambda r: r.version(f"3.{minor}")).kinds(kinds)
+            lambda r: r.version(f"3.{minor}"))
 
     return txn.uid("mbse.Expressions.Python.Types.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, **{f"Python_3_{minor}": Standard for minor in minors}, **clauses})
@@ -128,8 +129,8 @@ def define(txn: Any) -> Any:
             lambda _: _.dialect.standards({f"Python 3.{minor}": lambda e, minor=minor: e.standard(
                 getattr(_, f"Python_3_{minor}")) for minor in minors}),
             *(version(minor) for minor in minors),
-            # --- each standard's oldest edition flagged `before`, its newest `after` ---
-            *FS.editions_spec([_family.VERSIONS]),
+            # --- the kinds each edition has, each entry flagged by what is true beyond it ---
+            *FS.editions_spec([_family.VERSIONS], kinds),
             *specs,
         ])]))])
 

@@ -240,7 +240,7 @@ def define(which: str, txn: Any) -> Any:
     own = tags(which)
     every = [branch.schema for branch in OWN.Term.as_schema().branches if branch.name in own]
     edition = lambda _, year, common, symbol: getattr(_, symbol).bodies(["org.ieee"]).number("1003.1").revision(  # noqa: E731
-        lambda r: r.year(year)).names(list(common)).kinds(every)
+        lambda r: r.year(year)).names(list(common))
     clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES[which], {
         branch.name: branch.schema for branch in OWN.Term.as_schema().branches}, [[symbol for *_, symbol in EDITIONS]])
     return txn.uid(f"mbse.Expressions.POSIX.{which}.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
@@ -250,8 +250,8 @@ def define(which: str, txn: Any) -> Any:
                                            for designation, _year, _names, symbol in EDITIONS}),
             *(lambda _, year=year, common=common, symbol=symbol: edition(_, year, common, symbol)
               for _designation, year, common, symbol in EDITIONS),
-            # --- each standard's oldest edition flagged `before`, its newest `after` ---
-            *FS.editions_spec([[symbol for *_, symbol in EDITIONS]]),
+            # --- the kinds each edition has, each entry flagged by what is true beyond it ---
+            *FS.editions_spec([[symbol for *_, symbol in EDITIONS]], {symbol: every for *_, symbol in EDITIONS}),
             *specs,
         ])]))])
 

@@ -490,7 +490,7 @@ export function define(txn: any): any {
     .symbols({ dialect: TypeScript5.Dialect, ...versions, boolean: Domain, number: Domain, bigint: Domain,
       string: Domain, null: Domain, ...clauses })
     .spec([
-      // --- the versions of TypeScript 5 it covers, each by its published name, with the kinds it has: all ---
+      // --- the versions of TypeScript 5 it covers, each by its published name ---
       (_: any) => _.dialect.standards({
         "TypeScript 5.0": (e: any) => e.standard(_.TypeScript_5_0),
         "TypeScript 5.1": (e: any) => e.standard(_.TypeScript_5_1),
@@ -503,19 +503,19 @@ export function define(txn: any): any {
         "TypeScript 5.8": (e: any) => e.standard(_.TypeScript_5_8),
         "TypeScript 5.9": (e: any) => e.standard(_.TypeScript_5_9),
       }),
-      (_: any) => _.TypeScript_5_0.bodies(MICROSOFT).revision((r: any) => r.version("5.0")).kinds(every),
-      (_: any) => _.TypeScript_5_1.bodies(MICROSOFT).revision((r: any) => r.version("5.1")).kinds(every),
-      (_: any) => _.TypeScript_5_2.bodies(MICROSOFT).revision((r: any) => r.version("5.2")).kinds(every),
-      (_: any) => _.TypeScript_5_3.bodies(MICROSOFT).revision((r: any) => r.version("5.3")).kinds(every),
-      (_: any) => _.TypeScript_5_4.bodies(MICROSOFT).revision((r: any) => r.version("5.4")).kinds(every),
-      (_: any) => _.TypeScript_5_5.bodies(MICROSOFT).revision((r: any) => r.version("5.5")).kinds(every),
-      (_: any) => _.TypeScript_5_6.bodies(MICROSOFT).revision((r: any) => r.version("5.6")).kinds(every),
-      (_: any) => _.TypeScript_5_7.bodies(MICROSOFT).revision((r: any) => r.version("5.7")).kinds(every),
-      (_: any) => _.TypeScript_5_8.bodies(MICROSOFT).revision((r: any) => r.version("5.8")).kinds(every),
-      (_: any) => _.TypeScript_5_9.bodies(MICROSOFT).revision((r: any) => r.version("5.9")).kinds(every),
+      (_: any) => _.TypeScript_5_0.bodies(MICROSOFT).revision((r: any) => r.version("5.0")),
+      (_: any) => _.TypeScript_5_1.bodies(MICROSOFT).revision((r: any) => r.version("5.1")),
+      (_: any) => _.TypeScript_5_2.bodies(MICROSOFT).revision((r: any) => r.version("5.2")),
+      (_: any) => _.TypeScript_5_3.bodies(MICROSOFT).revision((r: any) => r.version("5.3")),
+      (_: any) => _.TypeScript_5_4.bodies(MICROSOFT).revision((r: any) => r.version("5.4")),
+      (_: any) => _.TypeScript_5_5.bodies(MICROSOFT).revision((r: any) => r.version("5.5")),
+      (_: any) => _.TypeScript_5_6.bodies(MICROSOFT).revision((r: any) => r.version("5.6")),
+      (_: any) => _.TypeScript_5_7.bodies(MICROSOFT).revision((r: any) => r.version("5.7")),
+      (_: any) => _.TypeScript_5_8.bodies(MICROSOFT).revision((r: any) => r.version("5.8")),
+      (_: any) => _.TypeScript_5_9.bodies(MICROSOFT).revision((r: any) => r.version("5.9")),
       // --- its grammar clauses, each allowed or forbidden by each version ---
-      // --- each standard's oldest edition flagged `before`, its newest `after` ---
-      ...FS.editionsSpec([Domains.VERSIONS]),
+      // --- the kinds each edition has, each entry flagged by what is true beyond it ---
+      ...FS.editionsSpec([Domains.VERSIONS], new Map(Domains.VERSIONS.map((version) => [version, every]))),
       ...specs,
       // --- its domains ---
       (_: any) => _.dialect.domains({

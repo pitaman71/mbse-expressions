@@ -207,23 +207,23 @@ def define(txn: Any) -> Any:
                 "IEEE Std 1800-2017": lambda e: e.standard(_.SystemVerilog_2017),
                 "IEEE Std 1800-2023": lambda e: e.standard(_.SystemVerilog_2023)}),
             lambda _: _.Verilog_1995.bodies(["org.ieee"]).number("1364").revision(lambda r: r.year(1995)).names(
-                ["Verilog-1995"]).kinds(kinds[0]),
+                ["Verilog-1995"]),
             lambda _: _.Verilog_2001.bodies(["org.ieee"]).number("1364").revision(lambda r: r.year(2001)).names(
-                ["Verilog-2001"]).kinds(kinds[1]),
+                ["Verilog-2001"]),
             lambda _: _.Verilog_2005.bodies(["org.ieee"]).number("1364").revision(lambda r: r.year(2005)).names(
-                ["Verilog-2005"]).kinds(kinds[2]),
+                ["Verilog-2005"]),
             lambda _: _.SystemVerilog_2005.bodies(["org.ieee"]).number("1800").revision(lambda r: r.year(2005)).names(
-                ["SystemVerilog-2005"]).kinds(kinds[3]),
+                ["SystemVerilog-2005"]),
             lambda _: _.SystemVerilog_2009.bodies(["org.ieee"]).number("1800").revision(lambda r: r.year(2009)).names(
-                ["SystemVerilog-2009"]).kinds(kinds[4]),
+                ["SystemVerilog-2009"]),
             lambda _: _.SystemVerilog_2012.bodies(["org.ieee"]).number("1800").revision(lambda r: r.year(2012)).names(
-                ["SystemVerilog-2012"]).kinds(kinds[5]),
+                ["SystemVerilog-2012"]),
             lambda _: _.SystemVerilog_2017.bodies(["org.ieee"]).number("1800").revision(lambda r: r.year(2017)).names(
-                ["SystemVerilog-2017"]).kinds(kinds[6]),
+                ["SystemVerilog-2017"]),
             lambda _: _.SystemVerilog_2023.bodies(["org.ieee"]).number("1800").revision(lambda r: r.year(2023)).names(
-                ["SystemVerilog-2023"]).kinds(kinds[7]),
-            # --- each standard's oldest edition flagged `before`, its newest `after` ---
-            *FS.editions_spec([_family.SYMBOLS[:3], _family.SYMBOLS[3:]]),
+                ["SystemVerilog-2023"]),
+            # --- the kinds each edition has, each entry flagged by what is true beyond it ---
+            *FS.editions_spec([_family.SYMBOLS[:3], _family.SYMBOLS[3:]], dict(zip(_family.SYMBOLS, kinds))),
         ])]))])
 
 

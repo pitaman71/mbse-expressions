@@ -163,9 +163,9 @@ export function define(txn: any): any {
       (_: any) => _.dialect.standards(Object.fromEntries(versions.map((version, minor) => [
         `TypeScript 5.${minor}`, (e: any) => e.standard(_[version])]))),
       ...versions.map((version, minor) => (_: any) => _[version].bodies(["com.microsoft"]).revision(
-        (r: any) => r.version(`5.${minor}`)).kinds(every)),
-      // --- each standard's oldest edition flagged `before`, its newest `after` ---
-      ...FS.editionsSpec([versions]),
+        (r: any) => r.version(`5.${minor}`))),
+      // --- the kinds each edition has, each entry flagged by what is true beyond it ---
+      ...FS.editionsSpec([versions], new Map(versions.map((version) => [version, every]))),
     ])]))]);
 }
 

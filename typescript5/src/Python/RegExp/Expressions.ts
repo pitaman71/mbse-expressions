@@ -228,9 +228,10 @@ export function define(txn: any): any {
   const minors = Array.from({ length: 16 }, (_, minor) => minor);
   const [clauses, specs] = FS.grammarClausesSpec(txn, "dialect", GRAMMAR_CLAUSES,
     new Map(every.map((b) => [b.name, b.schema])), [Family.VERSIONS]);
+  const kinds = new Map(Family.VERSIONS.map((symbol) => [symbol,
+    every.filter((b) => (ONLY.get(b.name) ?? Family.VERSIONS).includes(symbol)).map((b) => b.schema)]));
   const version = (minor: number) => (_: any) => _[`Python_3_${minor}`].bodies(["org.python"]).revision(
-    (r: any) => r.version(`3.${minor}`)).kinds(every.filter(
-      (b) => (ONLY.get(b.name) ?? Family.VERSIONS).includes(Family.VERSIONS[minor]!)).map((b) => b.schema));
+    (r: any) => r.version(`3.${minor}`));
   return txn.uid("mbse.Expressions.Python.RegExp.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(minors.map((minor) => [`Python_3_${minor}`, Standard])),
       ...clauses })
@@ -238,8 +239,8 @@ export function define(txn: any): any {
       (_: any) => _.dialect.standards(Object.fromEntries(minors.map((minor) => [`Python 3.${minor}`,
         (e: any) => e.standard(_[`Python_3_${minor}`])]))),
       ...minors.map(version),
-      // --- each standard's oldest edition flagged `before`, its newest `after` ---
-      ...FS.editionsSpec([Family.VERSIONS]),
+      // --- the kinds each edition has, each entry flagged by what is true beyond it ---
+      ...FS.editionsSpec([Family.VERSIONS], kinds),
       ...specs,
     ])]))]);
 }

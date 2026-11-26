@@ -53,11 +53,6 @@ mutations:
             - set:
                 value:
                 - C23
-        - as_property:
-            name: after
-            mutations:
-            - set:
-                value: true
         - as_adjacency:
             name: dialect
             mutations:
@@ -117,6 +112,11 @@ mutations:
                                                 name: Literal
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -151,6 +151,11 @@ mutations:
                                                 name: Constant
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -185,6 +190,11 @@ mutations:
                                                 name: ConcatenatedString
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -213,6 +223,11 @@ mutations:
                                             name: Variable
                                           next:
                                             target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -247,6 +262,11 @@ mutations:
                                                 name: ParenthesizedExpression
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -281,6 +301,11 @@ mutations:
                                                 name: GenericSelection
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -315,6 +340,11 @@ mutations:
                                                 name: SubscriptExpression
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -349,6 +379,11 @@ mutations:
                                                 name: CallExpression
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -383,6 +418,11 @@ mutations:
                                                 name: MemberExpression
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -417,6 +457,11 @@ mutations:
                                                 name: PostfixExpression
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -451,6 +496,11 @@ mutations:
                                                 name: UnaryExpression
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -485,6 +535,11 @@ mutations:
                                                 name: SizeofExpression
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -519,6 +574,11 @@ mutations:
                                                 name: AlignofExpression
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -553,6 +613,11 @@ mutations:
                                                 name: CastExpression
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -587,6 +652,11 @@ mutations:
                                                 name: BinaryExpression
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -621,6 +691,11 @@ mutations:
                                                 name: ConditionalExpression
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -655,6 +730,11 @@ mutations:
                                                 name: AssignmentExpression
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -689,6 +769,11 @@ mutations:
                                                 name: InitializerList
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -723,6 +808,11 @@ mutations:
                                                 name: DesignatedInitializer
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
                 - mutations:
                   - as_link:
                       name: kind
@@ -757,6 +847,11 @@ mutations:
                                                 name: CompoundLiteralExpression
                                               next:
                                                 target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
         - as_adjacency:
             name: allows
             mutations:

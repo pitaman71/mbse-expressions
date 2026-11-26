@@ -262,9 +262,10 @@ export function define(which: string, txn: any): any {
       (_: any) => _.dialect.standards(Object.fromEntries(EDITIONS.map(([designation, , , symbol]) =>
         [designation, (e: any) => e.standard(_[symbol])]))),
       ...EDITIONS.map(([, year, common, symbol]) => (_: any) => _[symbol].bodies(["org.ieee"]).number("1003.1").revision(
-        (r: any) => r.year(year)).names([...common]).kinds(every)),
-      // --- each standard's oldest edition flagged `before`, its newest `after` ---
-      ...FS.editionsSpec([EDITIONS.map(([, , , symbol]) => symbol)]),
+        (r: any) => r.year(year)).names([...common])),
+      // --- the kinds each edition has, each entry flagged by what is true beyond it ---
+      ...FS.editionsSpec([EDITIONS.map(([, , , symbol]) => symbol)],
+        new Map(EDITIONS.map(([, , , symbol]) => [symbol, every]))),
       ...specs,
     ])]))]);
 }

@@ -51,10 +51,10 @@
  * reverse-domain name, its `number` and its `revision` (a value of `Expressions.Framework.Revision`: a `year`, an
  * `edition` or a `version`), and its common `names` (`C11`), so that it is found by either; each kind's schema, a
  * `Schemas.OfObject`, records the editions that have it through the extension adjacency `standards`
- * (`Expressions.Framework.HasStandard(kind, standard)`, a set). A standard's oldest edition a dialect covers is flagged
- * `before`, and its newest `after`, guessing the kinds of an edition the data does not represent: on the edition for
- * now, pending mbse-schemas' allowing them on `HasStandard`. `Domains` reads stored domains and operations, `Standards`
- * stored standards.
+ * (`Expressions.Framework.HasStandard(kind, standard)`, one entry a kind and an edition), each entry flagged `before`
+ * where it is of its standard's oldest edition a dialect covers and `after` where of its newest, guessing the kinds of
+ * an edition the data does not represent. `Domains` reads stored domains and operations, `Standards` stored
+ * standards.
  *
  * Terms are built through mbse-schemas' builders, in a transaction, and read through its readers: a term's kind is the
  * branch its dialect's `Term` holds, its properties the branch's members. Which properties are a kind's subterms (a
@@ -239,11 +239,6 @@ export function install(txn: any): any {
         bodies: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfStr])), // by reverse-domain name
         number: S.OfStr, revision: _.Revision,
         names: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfStr])), // its common names
-        // the kinds it has standing for the editions of its standard before or after it that the data does not
-        // represent, only to guess them, as `Allows`'s flags do: for now on the edition, until mbse-schemas allows
-        // properties on `HasStandard`, which a kind's schema reads through an extension adjacency (mbse-schemas'
-        // CAP-116, to be revised there), where they belong
-        before: S.OfBool, after: S.OfBool,
       }).adjacencies({
         dialect: (a: any) => a.relation([_.Covers]).me("standard").owner(true), // its dialect's, its designation
         kinds: (a: any) => a.relation([_.HasStandard]).me("standard"),
@@ -252,8 +247,13 @@ export function install(txn: any): any {
       (_: any) => _.Covers.name("Expressions.Framework.Covers").links([
         (t: any) => t.name("dialect").schema([_.Dialect]), (t: any) => t.name("standard")]).properties({
         designation: S.OfStr }).uniques([["dialect", "designation"], ["standard"]]),
+      // A kind an edition has, `before` and `after` extending the entry to the editions before or after its own that
+      // the data does not represent, only to guess them, as `Allows`'s flags do (a kind's schema reads it through an
+      // extension adjacency: mbse-schemas' CAP-117)
       (_: any) => _.HasStandard.name("Expressions.Framework.HasStandard").links([
-        (t: any) => t.name("kind").schema([_.OfObject]), (t: any) => t.name("standard")]).uniques([]), // a set
+        (t: any) => t.name("kind").schema([_.OfObject]), (t: any) => t.name("standard"),
+      ]).properties({ before: S.OfBool, after: S.OfBool }).uniques([["before", "after"]]), // one entry a kind and an
+      // edition
       // A grammar clause: an alternative within a production of a dialect's grammar, owned by the dialect by name: a
       // kind, one of its properties, and what that property may hold there, present or absent (`present`), one of these
       // values (`values`), or a term of one of these kinds (`kinds`), each kind's own subterms held as the nested
