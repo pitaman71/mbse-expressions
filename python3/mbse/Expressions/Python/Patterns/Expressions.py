@@ -48,7 +48,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as FD, Terms as F
+from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as F
 
 from ..Python3 import Domains as _family, Expressions as P
 
@@ -156,6 +156,8 @@ def define(txn: Any) -> Any:
             lambda _: _.dialect.standards({f"Python 3.{minor}": lambda e, minor=minor: e.standard(
                 getattr(_, f"Python_3_{minor}")) for minor in minors}),
             *(version(minor) for minor in minors),
+            # --- each standard's oldest edition flagged `before`, its newest `after` ---
+            *FS.editions_spec([[f"Python_3_{minor}" for minor in minors]]),
         ])]))])
 
 

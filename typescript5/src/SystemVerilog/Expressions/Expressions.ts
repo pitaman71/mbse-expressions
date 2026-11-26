@@ -88,6 +88,7 @@
 import { Errors, Proxies, Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as Assertions from "../Assertions/Expressions.js";
 import * as Constraints from "../Constraints/Expressions.js";
@@ -547,6 +548,8 @@ export function define(txn: any): any {
       (_: any) => _.shortreal.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754((v: any) => v.ieee754(
         (d: any) => d.format("binary32").rounding("roundTiesToEven").width(32n).radix(2n).precision(24n).emax(127n).ordered(
           true)))))).schema([SV.shortreal]),
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([SYMBOLS.slice(0, 3), SYMBOLS.slice(3)]),
     ])]))]);
 }
 

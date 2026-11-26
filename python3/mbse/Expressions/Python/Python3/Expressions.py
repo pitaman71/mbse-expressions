@@ -62,7 +62,8 @@ The versions of Python 3 the dialect covers are data, which `define` writes, eac
 a version changes within a kind is data too, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each
 version: a binop's `@` (3.5), an `async` comprehension (3.6), a formatted value's `=` and positional-only parameters
 (3.8), a subscript whose index is unpacked, alone or in a tuple (3.11), and a list, set or generator comprehension of
-unpacked elements and a dict comprehension of unpacked mappings (3.15). A NumPy expression is a Python expression that
+unpacked elements and a dict comprehension of unpacked mappings (3.15); and what a version removed, a name `async` or
+`await`, which 3.7 reserved, forbidden from it *(agent)*. A NumPy expression is a Python expression that
 imports numpy: NumPy is a vocabulary of calls, not a dialect.
 
 `DIALECT` reads them (`Terms.Dialect`), and the terms of its family's other dialects, `Python Types`, `Python
@@ -138,6 +139,7 @@ GRAMMAR_CLAUSES = (
     *(FS.kinds_of(f"{kind} of unpacked elements", kind, "body", (STARRED,), (), VERSIONS[15:])
       for kind in (LISTCOMP, SETCOMP, GENERATOREXP)),
     FS.absent("dictcomp of unpacked mappings", DICTCOMP, "body", VERSIONS[15:]),
+    FS.values("variable.name 'async' or 'await'", NAME, "name", ("async", "await"), VERSIONS[:7]),  # reserved: 3.7
 )
 """Its grammar clauses, each with the versions that allow it, every other forbidding it, named as mbse-programs'
 `Check` names the language feature: what a property's value makes available within a kind (`Framework.Standards`).
@@ -401,7 +403,7 @@ def define(txn: Any) -> Any:
     schemas = {**{branch.name: branch.schema for branch in Python3.Term.as_schema().branches},
                **{name.lower(): getattr(Python3, name).as_schema()
                   for name in ("Comprehension", "FormattedValue", "Arguments")}}
-    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, schemas, [VERSIONS])
+    clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES, schemas, [VERSIONS])
 
     PSF = ["org.python"]
     return txn.uid("mbse.Expressions.Python.Python3.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
@@ -437,6 +439,8 @@ def define(txn: Any) -> Any:
             lambda _: _.Python_3_14.bodies(PSF).revision(lambda r: r.version("3.14")).kinds(has(14)),
             lambda _: _.Python_3_15.bodies(PSF).revision(lambda r: r.version("3.15")).kinds(has(15)),
             # --- its grammar clauses, each allowed or forbidden by each version ---
+            # --- each standard's oldest edition flagged `before`, its newest `after` ---
+            *FS.editions_spec([VERSIONS]),
             *specs,
             # --- its domains ---
             lambda _: _.dialect.domains({

@@ -277,7 +277,7 @@ export function define(txn: any): any {
     ...(OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map(
       (b) => [b.name, b.schema] as [string, unknown]),
     ...HELPERS.map((name) => [name.toLowerCase(), OWN[name].as_schema()] as [string, unknown])]);
-  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, schemas, [K.C_EDITIONS]);
+  const [clauses, specs] = FS.grammarClausesSpec(txn, "dialect", GRAMMAR_CLAUSES, schemas, [K.C_EDITIONS]);
   return txn.uid("mbse.Expressions.C.Types.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ dialect: OWN.Dialect, C11: Standard, C17: Standard, C23: Standard, ...clauses })
     .spec([
@@ -290,6 +290,8 @@ export function define(txn: any): any {
         ["C17"]).kinds(every),
       (_: any) => _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2024n)).names(
         ["C23"]).kinds(every),
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([K.C_EDITIONS]),
       ...specs,
     ])]))]);
 }

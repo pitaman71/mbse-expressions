@@ -34,7 +34,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as FD, Terms as F
+from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as F
 
 from ..TypeScript5 import Domains as _family, Nodes
 
@@ -153,6 +153,8 @@ def define(txn: Any) -> Any:
                                            for minor, version in enumerate(versions)}),
             *[lambda _, minor=minor, version=version: getattr(_, version).bodies(["com.microsoft"]).revision(
                 lambda r: r.version(f"5.{minor}")).kinds(every) for minor, version in enumerate(versions)],
+            # --- each standard's oldest edition flagged `before`, its newest `after` ---
+            *FS.editions_spec([versions]),
         ])]))])
 
 

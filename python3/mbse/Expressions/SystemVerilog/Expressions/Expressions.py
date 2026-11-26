@@ -89,7 +89,7 @@ import re
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as FD, Terms as F
+from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as F
 from mbse.Schemas.Framework import Proxies
 
 from . import Domains
@@ -530,6 +530,8 @@ def define(txn: Any) -> Any:
             lambda _: _.shortreal.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(
                 lambda d: d.format("binary32").rounding("roundTiesToEven").width(32).radix(2).precision(24).emax(127).ordered(
                     True)))))).schema([SV.shortreal]),
+            # --- each standard's oldest edition flagged `before`, its newest `after` ---
+            *FS.editions_spec([SYMBOLS[:3], SYMBOLS[3:]]),
         ])]))])
 
 

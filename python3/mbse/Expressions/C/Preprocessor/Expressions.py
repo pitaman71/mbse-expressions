@@ -261,7 +261,7 @@ def define(txn: Any) -> Any:
         """The kinds an edition has, by its frame symbol: each not in `ONLY`, and each that lists it there."""
         return [schema for tag, schema in every.items() if edition in ONLY.get(tag, (edition,))]
 
-    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, {
+    clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES, {
         branch.name: branch.schema for branch in OWN.Term.as_schema().branches}, [K.C_EDITIONS, K.CPP_EDITIONS])
 
     return txn.uid("mbse.Expressions.C.Preprocessor.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
@@ -285,6 +285,8 @@ def define(txn: Any) -> Any:
                 ["C++20"]).kinds(kinds("Cpp20")),
             lambda _: _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2024)).names(
                 ["C++23"]).kinds(kinds("Cpp23")),
+            # --- each standard's oldest edition flagged `before`, its newest `after` ---
+            *FS.editions_spec([K.C_EDITIONS, K.CPP_EDITIONS]),
             *specs,
         ])]))])
 

@@ -51,6 +51,7 @@ import { Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
 import type { Listed } from "../../Framework/Objects.js";
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as Family from "../Python3/Domains.js";
 import * as P from "../Python3/Expressions.js";
@@ -160,6 +161,8 @@ export function define(txn: any): any {
       (_: any) => _.dialect.standards(Object.fromEntries(minors.map((minor) => [`Python 3.${minor}`,
         (e: any) => e.standard(_[`Python_3_${minor}`])]))),
       ...minors.map(version),
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([minors.map((minor) => `Python_3_${minor}`)]),
     ])]))]);
 }
 

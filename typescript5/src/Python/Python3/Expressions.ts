@@ -63,8 +63,9 @@
  * What a version changes within a kind is data too, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden
  * by each version: a binop's `@` (3.5), an `async` comprehension (3.6), a formatted value's `=` and positional-only
  * parameters (3.8), a subscript whose index is unpacked, alone or in a tuple (3.11), and a list, set or generator
- * comprehension of unpacked elements and a dict comprehension of unpacked mappings (3.15). A NumPy expression is a
- * Python expression that imports numpy: NumPy is a vocabulary of calls, not a dialect.
+ * comprehension of unpacked elements and a dict comprehension of unpacked mappings (3.15); and what a version removed,
+ * a name `async` or `await`, which 3.7 reserved, forbidden from it *(agent)*. A NumPy expression is a Python expression
+ * that imports numpy: NumPy is a vocabulary of calls, not a dialect.
  *
  * `DIALECT` reads them (`Terms.Dialect`), and the terms of its family's other dialects, `Python Types`, `Python
  * Patterns` and `Python RegExp` (`reads`), so that a tree mixing them is validated, inferred and printed from any of their holders. The
@@ -170,6 +171,7 @@ export const GRAMMAR_CLAUSES: readonly FS.GrammarClause[] = [
   ...[LISTCOMP, SETCOMP, GENERATOREXP].map((kind) =>
     FS.kindsOf(`${kind} of unpacked elements`, kind, "body", [STARRED], [], VERSIONS.slice(15))),
   FS.absent("dictcomp of unpacked mappings", DICTCOMP, "body", VERSIONS.slice(15)),
+  FS.values("variable.name 'async' or 'await'", NAME, "name", ["async", "await"], VERSIONS.slice(0, 7)), // reserved: 3.7
 ];
 
 /** Python3's union of its kinds, added to the framework's terms as the branch `python3`, its own kinds and the helpers
@@ -415,7 +417,7 @@ export function define(txn: any): any {
       (b) => [b.name, b.schema] as [string, unknown]),
     ...["Comprehension", "FormattedValue", "Arguments"].map(
       (name) => [name.toLowerCase(), Python3[name].as_schema()] as [string, unknown])]);
-  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, schemas, [VERSIONS]);
+  const [clauses, specs] = FS.grammarClausesSpec(txn, "dialect", GRAMMAR_CLAUSES, schemas, [VERSIONS]);
   const PSF = ["org.python"];
   const versions = Object.fromEntries(VERSIONS.map((version) => [version, Standard]));
   return txn.uid("mbse.Expressions.Python.Python3.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
@@ -450,6 +452,8 @@ export function define(txn: any): any {
       (_: any) => _.Python_3_14.bodies(PSF).revision((r: any) => r.version("3.14")).kinds(has(14)),
       (_: any) => _.Python_3_15.bodies(PSF).revision((r: any) => r.version("3.15")).kinds(has(15)),
       // --- its grammar clauses, each allowed or forbidden by each version ---
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([VERSIONS]),
       ...specs,
       // --- its domains ---
       (_: any) => _.dialect.domains({

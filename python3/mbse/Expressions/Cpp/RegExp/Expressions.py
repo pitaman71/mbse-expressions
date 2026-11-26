@@ -57,7 +57,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as FD, Terms as F
+from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as F
 
 __all__ = ["install", "define", "DIALECT", "TAGS", "HELPERS", "GRAMMARS", "SYNTAX_OPTIONS", "ECMASCRIPT",
            "GRAMMAR_DIALECTS", "CLASS_NAMES", "SETS", "ASSERTIONS", "HOLDS", "FEATURES", "grammar", "problems"]
@@ -219,6 +219,8 @@ def define(txn: Any) -> Any:
                 ["C++20"]).kinds(every),
             lambda _: _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2024)).names(
                 ["C++23"]).kinds(every),
+            # --- each standard's oldest edition flagged `before`, its newest `after` ---
+            *FS.editions_spec([("Cpp17", "Cpp20", "Cpp23")]),
         ])]))])
 
 

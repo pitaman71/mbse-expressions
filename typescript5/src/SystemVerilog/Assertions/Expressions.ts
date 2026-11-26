@@ -49,6 +49,7 @@
 import { Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as Family from "../Expressions/Domains.js";
 import * as X from "../Expressions/Expressions.js";
@@ -250,6 +251,8 @@ export function define(txn: any): any {
         ["SystemVerilog-2017"]).kinds(kinds[3]),
       (_: any) => _.SystemVerilog_2023.bodies(["org.ieee"]).number("1800").revision((r: any) => r.year(2023n)).names(
         ["SystemVerilog-2023"]).kinds(kinds[4]),
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([Family.SYMBOLS.slice(3)]),
     ])]))]);
 }
 

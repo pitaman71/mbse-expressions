@@ -200,7 +200,7 @@ export function define(txn: any): any {
   const every = new Map((OWN.Term.as_schema().branches as readonly any[]).filter((branch) => TAGS.includes(branch.name))
     .map((branch) => [branch.name, branch.schema] as [string, any]));
   const kinds = X.editions(every, new Map(), Family.SYMBOLS);
-  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map(
+  const [clauses, specs] = FS.grammarClausesSpec(txn, "dialect", GRAMMAR_CLAUSES, new Map(
     (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema])),
   [Family.SYMBOLS.slice(0, 3), Family.SYMBOLS.slice(3)]);
   return txn.uid("mbse.Expressions.SystemVerilog.Preprocessor.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
@@ -233,6 +233,8 @@ export function define(txn: any): any {
               ["SystemVerilog-2017"]).kinds(kinds[6]),
           (_: any) => _.SystemVerilog_2023.bodies(["org.ieee"]).number("1800").revision((r: any) => r.year(2023n)).names(
               ["SystemVerilog-2023"]).kinds(kinds[7]),
+          // --- each standard's oldest edition flagged `before`, its newest `after` ---
+          ...FS.editionsSpec([Family.SYMBOLS.slice(0, 3), Family.SYMBOLS.slice(3)]),
           ...specs,
       ])]))]);
 }

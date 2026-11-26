@@ -115,7 +115,7 @@ def define(txn: Any) -> Any:
     OWN, Standard = txn.Expressions.Python.Types, txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS}
     minors = range(16)
-    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, every, [_family.VERSIONS])
+    clauses, specs = FS.grammar_clauses_spec(txn, "dialect", GRAMMAR_CLAUSES, every, [_family.VERSIONS])
 
     def version(minor: int) -> Callable[[Any], Any]:
         kinds = [schema for tag, schema in every.items() if _family.VERSIONS[minor] in ONLY[tag]]
@@ -128,6 +128,8 @@ def define(txn: Any) -> Any:
             lambda _: _.dialect.standards({f"Python 3.{minor}": lambda e, minor=minor: e.standard(
                 getattr(_, f"Python_3_{minor}")) for minor in minors}),
             *(version(minor) for minor in minors),
+            # --- each standard's oldest edition flagged `before`, its newest `after` ---
+            *FS.editions_spec([_family.VERSIONS]),
             *specs,
         ])]))])
 
