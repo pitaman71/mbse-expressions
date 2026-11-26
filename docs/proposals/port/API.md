@@ -3126,17 +3126,17 @@ yes" (the two API fixes).
 448. **The writer's dialect**: `grammar_clauses_spec(txn, dialect, clauses, schemas, editions)`, the frame symbol of
      the dialect that owns the grammar clauses the caller's (every define here passes `"dialect"`), no longer a fixed
      `dialect`. A breaking change: mbse-programs' `Standards.define`s call it.
-449. **A kind's membership flagged**: as decided, each standard's oldest edition `before` and its newest `after`. They
-     belong on `HasStandard`, as the user decided, once mbse-schemas allows properties on a relation an extension
-     adjacency reads (its CAP-116, Decided 18 and 22, to be revised there). Until then, temporarily and not as a
-     decision, they are on the edition, `Expressions.Framework.Standard`'s bools `before` and `after`: mbse-schemas
-     refuses an extension adjacency (a kind's schema's `standards`) to a relation with
-     properties ("an extension's adjacency 'standards' is to a relation of two links and no properties"), and
-     `Covers`, the dialect's mapping by designation, takes one property alone. `editions_spec(editions)`
-     (`editionsSpec`) gives the specs that flag them, editions grouped by standard as for `grammar_clauses_spec`; every
-     dialect with kinds writes them (Python3 and its family, TypeScript5 and its family, C, C Types, C Preprocessor
-     C's and C++'s, C++, C++ Types, C++ RegExp, POSIX BRE and ERE, SystemVerilog's six IEEE 1364's and IEEE 1800's).
-     `properties(standard)` leaves the flags out, no part of its reference.
+449. **A kind's membership flagged**: as decided, `Expressions.Framework.HasStandard(kind, standard)` has the optional
+     bools `before` and `after`, as `Allows` and `Forbids` have them, one entry a kind and an edition (unique
+     `[before, after]`, as theirs) *(agent: the unique clause)*: an entry of each standard's oldest edition a dialect
+     covers flagged `before`, one of its newest `after`, by what is true beyond it, so that `edition_has` guesses an
+     edition the data does not represent from its neighbours' entries of the kind (item 454). A kind's schema reads the
+     entries, with their flags, through its extension adjacency `standards` (mbse-schemas' CAP-117).
+     `editions_spec(editions, kinds)` (`editionsSpec`) gives the specs that write each edition's kinds, editions grouped
+     by standard as for `grammar_clauses_spec`, and the kinds each has by its frame symbol (a dict; TypeScript a `Map`);
+     every dialect with kinds writes them through it (Python3 and its family, TypeScript5 and its family, C, C Types, C
+     Preprocessor C's and C++'s, C++, C++ Types, C++ RegExp, POSIX BRE and ERE, SystemVerilog's six IEEE 1364's and IEEE
+     1800's). `Expressions.Framework.Standard` has no flags: `properties(standard)` gives its reference's parts.
 450. **The data**: C's `literal.prefix 'u8' of a character` (C23), requiring `literal of a character` (its `quote`
      `'`, no edition naming it), and C++'s `subscriptexpression of several indices` (`at_least` 2 of its `indices`,
      C++23), both former code (item 441). Removals, each forbidden from the edition that removed it *(agent: found
@@ -3157,6 +3157,29 @@ yes" (the two API fixes).
 452. **The corpus**: `standards` (C23's `after`), `c_domains`, `cpp_domains` and `python3_domains` regenerated,
      byte-identical in both languages.
 453. **The version**: 0.16.0, a breaking change (PRI-031): `takes`' result and `grammar_clauses_spec`'s signature.
+
+## Settled in a kind's membership flagged on `HasStandard`, for the user's review
+
+Stage 3's kinds' flags moved where the user decided them, mbse-basis' [grammar clauses by
+version](https://github.com/pitaman71/mbse-basis/blob/main/proposals/GRAMMAR-CLAUSES.md), "Decided in stage 3", 1 (b):
+"`HasStandard` gains `before` and `after` too", now that mbse-schemas 0.37.0 allows an extension adjacency to a
+relation with properties (its CAP-117).
+
+454. **The flags on `HasStandard`**: `HasStandard`'s properties `before` and `after` (item 449), and
+     `Expressions.Framework.Standard`'s gone. Each dialect's `define` writes its editions' kinds through
+     `editions_spec(editions, kinds)` (`editionsSpec`), each entry flagged by what is true beyond it: one of a
+     standard's oldest edition `before`, one of its newest `after`; a kind its oldest edition lacks (added later, or
+     removed at or before it) has no entry there, so none flagged `before`. `edition_has(dialect, designation,
+     revision, kind)` (`editionHas`) reads them: an edition the dialect does not cover has a kind where the nearest
+     before it that has it has its entry flagged `after`, or the nearest after it its entry flagged `before`; its
+     answers are as before. Tests: FRM-13 asserts the flags on each standard's editions' entries, read from the
+     edition's side and from the kind's (C's `constant`, C23's alone, flagged `after`), `HasStandard`'s properties and
+     unique clause, and the edition's properties without flags; FRM-14's guesses for unrepresented editions stand. The
+     corpus's `standards` regenerated (C23's entries flagged `after`, the edition not), its JSON byte-identical in both
+     languages. A journal (mbse-schemas' `Changes`) leaves out every entry linking a schema object, so `HasStandard`'s
+     entries and their flags reach no follow and no cache layer, mbse-schemas' limit, a separate question for the
+     user, not worked around here. The version: 0.17.0, the standards' data changed and `editions_spec`'s signature
+     (PRI-031); mbse-schemas 0.37.0 pinned.
 
 ## What stage 2b needed (done)
 
